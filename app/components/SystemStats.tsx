@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 
 type Data = {
   cpu: { cores: number; loadAvg: number[]; arch: string };
-  memory: { total: number; available: number; used: number };
-  gpu: { name: string; utilPercent: number; tempC: number; powerW: number } | null;
   disk: { total: number; used: number; available: number } | null;
+  host?: { os: string | null; kernel: string; nvidiaDriver: string | null };
+  loadedModels?: { name: string; sizeBytes: number }[];
   uptimeSeconds: number;
   timestamp: string;
 };
@@ -82,7 +82,6 @@ export function SystemStats() {
     );
   }
 
-  const memPct = (data.memory.used / data.memory.total) * 100;
   const diskPct = data.disk ? (data.disk.used / data.disk.total) * 100 : 0;
 
   return (
@@ -98,30 +97,18 @@ export function SystemStats() {
               load {data.cpu.loadAvg.map((l) => l.toFixed(2)).join(" · ")}
             </dd>
           </div>
-          {data.gpu && (
-            <div>
-              <dt className="text-ink-400 text-xs uppercase tracking-wider">GPU</dt>
-              <dd className="text-ink-100 font-mono mt-1">
-                {data.gpu.utilPercent.toFixed(0)}% · {data.gpu.tempC.toFixed(0)}°C
+          {data.host && (
+            <div className="min-w-0">
+              <dt className="text-ink-400 text-xs uppercase tracking-wider">System</dt>
+              <dd className="text-ink-100 font-mono mt-1 truncate" title={data.host.os ?? undefined}>
+                {data.host.os ?? "—"}
               </dd>
-              <dd className="text-ink-400 font-mono text-xs mt-0.5">
-                {data.gpu.powerW.toFixed(1)} W
+              <dd className="text-ink-400 font-mono text-xs mt-0.5 truncate">
+                kernel {data.host.kernel}
+                {data.host.nvidiaDriver ? " · driver " + data.host.nvidiaDriver : ""}
               </dd>
             </div>
           )}
-        </div>
-        <div>
-          <div className="flex items-baseline justify-between">
-            <dt className="text-ink-400 text-xs uppercase tracking-wider">
-              Memory <span className="text-ink-600 normal-case tracking-normal">(unified)</span>
-            </dt>
-            <dd className="text-ink-100 font-mono text-xs">
-              {fmtGiB(data.memory.used)} / {fmtGiB(data.memory.total)} GiB
-            </dd>
-          </div>
-          <div className="h-1.5 w-full bg-ink-800 rounded-full overflow-hidden mt-1.5">
-            <div className="h-full bg-gold-500/70" style={{ width: memPct + "%" }} />
-          </div>
         </div>
         {data.disk && (
           <div>
@@ -134,6 +121,21 @@ export function SystemStats() {
             <div className="h-1.5 w-full bg-ink-800 rounded-full overflow-hidden mt-1.5">
               <div className="h-full bg-nvgreen-500/70" style={{ width: diskPct + "%" }} />
             </div>
+          </div>
+        )}
+        {data.loadedModels && data.loadedModels.length > 0 && (
+          <div>
+            <dt className="text-ink-400 text-xs uppercase tracking-wider">Models loaded</dt>
+            <ul className="mt-1.5 space-y-1">
+              {data.loadedModels.map((m) => (
+                <li key={m.name} className="flex items-baseline justify-between gap-3">
+                  <span className="text-ink-100 font-mono text-xs truncate">{m.name}</span>
+                  <span className="text-ink-400 font-mono text-xs shrink-0">
+                    {fmtGiB(m.sizeBytes)} GiB
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </dl>

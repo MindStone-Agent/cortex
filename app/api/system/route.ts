@@ -68,12 +68,54 @@ async function readDisk(): Promise<DiskInfo | null> {
   }
 }
 
+type HostInfo = { os: string | null; kernel: string; nvidiaDriver: string | null };
+
+async function readHost(): Promise<HostInfo> {
+  let osName: string | null = null;
+  try {
+    const txt = await fs.readFile("/etc/os-release", "utf8");
+    const m = txt.match(/^PRETTY_NAME="?(.+?)"?$/m);
+    osName = m ? m[1] : null;
+  } catch {
+    osName = `${os.type()} ${os.release()}`; // non-Linux fallback
+  }
+  let driver: string | null = null;
+  try {
+    const { stdout } = await execAsync(
+      "nvidia-smi --query-gpu=driver_version --format=csv,noheader,nounits",
+      { timeout: 3000 }
+    );
+    driver = stdout.trim().split("\n")[0].trim() || null;
+  } catch {
+    driver = null;
+  }
+  return { os: osName, kernel: os.release(), nvidiaDriver: driver };
+}
+
+type LoadedModel = { name: string; sizeBytes: number };
+
+async function readLoadedModels(): Promise<LoadedModel[]> {
+  try {
+    const res = await fetch("http://localhost:11434/api/ps", {
+      cache: "no-store",
+      signal: AbortSignal.timeout(2500),
+    });
+    if (!res.ok) return [];
+    const json = (await res.json()) as { models?: { name: string; size: number }[] };
+    return (json.models ?? []).map((m) => ({ name: m.name, sizeBytes: m.size ?? 0 }));
+  } catch {
+    return [];
+  }
+}
+
 export async function GET() {
-  const [memory, gpu, disk, hardware] = await Promise.all([
+  const [memory, gpu, disk, hardware, host, loadedModels] = await Promise.all([
     readMemInfo(),
     readGpu(),
     readDisk(),
     getHardware(),
+    readHost(),
+    readLoadedModels(),
   ]);
   return NextResponse.json({
     cpu: {
@@ -85,6 +127,8 @@ export async function GET() {
     gpu,
     disk,
     hardware,
+    host,
+    loadedModels,
     uptimeSeconds: os.uptime(),
     timestamp: new Date().toISOString(),
   });

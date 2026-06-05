@@ -11,6 +11,8 @@ type Sample = {
   t: number;
   cpuPct: number;
   memPct: number;
+  memUsedBytes?: number;
+  memTotalBytes?: number;
   gpuUtil: number | null;
   gpuTempC: number | null;
   gpuPowerW: number | null;
@@ -21,6 +23,7 @@ type Sample = {
 // Fallback TDP for the power bar when nvidia-smi doesn't report power.limit
 // (NVIDIA DGX Spark / GB10 is ~240 W).
 const DEFAULT_TDP_W = 240;
+const GiB = 1024 ** 3;
 
 function push<T>(arr: T[], v: T, max: number): T[] {
   const next = arr.length >= max ? arr.slice(1) : arr.slice();
@@ -159,14 +162,24 @@ export function LivePerf() {
             />
           </div>
 
-          {/* Memory */}
+          {/* Memory — % and GB used/total (#11) */}
           <div>
             <div className="flex items-baseline justify-between mb-1.5">
               <span className="text-xs uppercase tracking-wider text-ink-400">
-                Memory <span className="text-ink-600 normal-case tracking-normal">(unified)</span>
+                Memory
+                {unified && (
+                  <span className="text-ink-600 normal-case tracking-normal"> (unified)</span>
+                )}
               </span>
               <span className="text-ink-100 font-mono text-sm">
-                {latest.memPct.toFixed(1)}%
+                {latest.memPct.toFixed(0)}%
+                {latest.memUsedBytes != null && latest.memTotalBytes != null && (
+                  <span className="text-ink-400 text-xs">
+                    {" · "}
+                    {(latest.memUsedBytes / GiB).toFixed(1)} /{" "}
+                    {(latest.memTotalBytes / GiB).toFixed(0)} GiB
+                  </span>
+                )}
               </span>
             </div>
             <div className="h-1.5 w-full bg-ink-800 rounded-full overflow-hidden">

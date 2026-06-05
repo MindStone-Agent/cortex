@@ -18,16 +18,18 @@ async function readCpuStat(): Promise<CpuSample> {
   return { idle, total };
 }
 
-async function readMemPct(): Promise<number> {
+type MemSample = { pct: number; usedBytes: number; totalBytes: number };
+
+async function readMem(): Promise<MemSample> {
   const text = await fs.readFile("/proc/meminfo", "utf8");
   const parse = (key: string) => {
     const m = text.match(new RegExp("^" + key + ":\\s+(\\d+)\\s+kB", "m"));
-    return m ? parseInt(m[1], 10) : 0;
+    return m ? parseInt(m[1], 10) * 1024 : 0;
   };
   const total = parse("MemTotal");
   const available = parse("MemAvailable");
-  if (total === 0) return 0;
-  return ((total - available) / total) * 100;
+  const used = total - available;
+  return { pct: total === 0 ? 0 : (used / total) * 100, usedBytes: used, totalBytes: total };
 }
 
 type GpuSample = { util: number; tempC: number; powerW: number };
@@ -82,7 +84,7 @@ export async function GET(req: Request) {
         try {
           const [currCpu, mem, gpu] = await Promise.all([
             readCpuStat(),
-            readMemPct(),
+            readMem(),
             readGpu(),
           ]);
           const cpuPct = diffCpuPct(prevCpu, currCpu);
@@ -90,7 +92,9 @@ export async function GET(req: Request) {
           const payload = {
             t: Date.now(),
             cpuPct,
-            memPct: mem,
+            memPct: mem.pct,
+            memUsedBytes: mem.usedBytes,
+            memTotalBytes: mem.totalBytes,
             gpuUtil: gpu?.util ?? null,
             gpuTempC: gpu?.tempC ?? null,
             gpuPowerW: gpu?.powerW ?? null,
