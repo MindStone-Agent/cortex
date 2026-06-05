@@ -16,8 +16,16 @@ type OllamaModel = {
 
 type ComfyModel = { name: string; size: number; type: string };
 
-// Format a context window token count as e.g. 131072 -> "128K", 8192 -> "8K".
-const fmtCtx = (n: number) => (n >= 1024 ? Math.round(n / 1024) + "K" : String(n));
+// Format a context window token count: 8192 -> "8K", 131072 -> "128K",
+// 10485760 -> "10M".
+const fmtCtx = (n: number) => {
+  if (n >= 1024 * 1024) {
+    const m = n / (1024 * 1024);
+    return (Number.isInteger(m) ? m.toFixed(0) : m.toFixed(1)) + "M";
+  }
+  if (n >= 1024) return Math.round(n / 1024) + "K";
+  return String(n);
+};
 
 type Data = {
   ollama: OllamaModel[] | null;
