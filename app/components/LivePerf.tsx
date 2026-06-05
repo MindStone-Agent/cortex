@@ -14,7 +14,13 @@ type Sample = {
   gpuUtil: number | null;
   gpuTempC: number | null;
   gpuPowerW: number | null;
+  mode?: "unified" | "split" | "cpu-only";
+  gpuPowerLimitW?: number | null;
 };
+
+// Fallback TDP for the power bar when nvidia-smi doesn't report power.limit
+// (NVIDIA DGX Spark / GB10 is ~240 W).
+const DEFAULT_TDP_W = 240;
 
 function push<T>(arr: T[], v: T, max: number): T[] {
   const next = arr.length >= max ? arr.slice(1) : arr.slice();
@@ -79,20 +85,38 @@ export function LivePerf() {
         <p className="text-sm text-error">{error}</p>
       )}
 
-      {latest && (
+      {latest && (() => {
+        const mode = latest.mode ?? "split";
+        const unified = mode === "unified";
+        const tdp = latest.gpuPowerLimitW ?? DEFAULT_TDP_W;
+        return (
         <div className="space-y-5">
-          {/* GPU */}
+          {/* GPU — power-primary on unified memory (GB10), where util is unreliable (#12) */}
+          {mode !== "cpu-only" && (
           <div>
             <div className="flex items-baseline justify-between mb-1.5">
-              <span className="text-xs uppercase tracking-wider text-ink-400">GPU</span>
+              <span className="text-xs uppercase tracking-wider text-ink-400">
+                GPU{" "}
+                <span className="text-ink-600 normal-case tracking-normal">
+                  {unified ? "(power)" : "(util)"}
+                </span>
+              </span>
               <span className="text-ink-100 font-mono text-sm">
-                {latest.gpuUtil != null ? latest.gpuUtil.toFixed(0) + "%" : "—"}
+                {unified
+                  ? latest.gpuPowerW != null
+                    ? latest.gpuPowerW.toFixed(0) + " W"
+                    : "—"
+                  : latest.gpuUtil != null
+                    ? latest.gpuUtil.toFixed(0) + "%"
+                    : "—"}
               </span>
             </div>
             <Sparkline
-              values={samples.map((s) => s.gpuUtil ?? 0)}
+              values={samples.map((s) =>
+                unified ? s.gpuPowerW ?? 0 : s.gpuUtil ?? 0
+              )}
               min={0}
-              max={100}
+              max={unified ? tdp : 100}
               height={56}
               color={NVGREEN}
               fillOpacity={0.18}
@@ -101,11 +125,21 @@ export function LivePerf() {
               <span>
                 {latest.gpuTempC != null ? latest.gpuTempC.toFixed(0) + "°C" : "—"}
               </span>
-              <span>
-                {latest.gpuPowerW != null ? latest.gpuPowerW.toFixed(1) + " W" : "—"}
-              </span>
+              {unified ? (
+                <span
+                  className="text-ink-600"
+                  title="GPU utilization is unreliable on unified-memory hardware (GB10) — it sticks high while a process is merely resident. Power draw is the honest activity signal."
+                >
+                  util {latest.gpuUtil != null ? latest.gpuUtil.toFixed(0) + "%" : "—"}*
+                </span>
+              ) : (
+                <span>
+                  {latest.gpuPowerW != null ? latest.gpuPowerW.toFixed(1) + " W" : "—"}
+                </span>
+              )}
             </div>
           </div>
+          )}
 
           {/* CPU */}
           <div>
@@ -143,7 +177,8 @@ export function LivePerf() {
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {connected && error && (
         <p className="mt-3 text-xs text-warning font-mono">{error}</p>

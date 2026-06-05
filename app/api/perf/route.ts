@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
+import { getHardware } from "@/app/lib/hardware";
 
 const execAsync = promisify(exec);
 
@@ -61,6 +62,7 @@ export async function GET(req: Request) {
   const stream = new ReadableStream({
     async start(controller) {
       let prevCpu = await readCpuStat();
+      const hw = await getHardware();
       let closed = false;
 
       const close = () => {
@@ -92,6 +94,10 @@ export async function GET(req: Request) {
             gpuUtil: gpu?.util ?? null,
             gpuTempC: gpu?.tempC ?? null,
             gpuPowerW: gpu?.powerW ?? null,
+            // Hardware-mode hints so the client renders the right primary GPU metric.
+            // On unified memory (GB10) util is unreliable — prefer power. See #12.
+            mode: hw.mode,
+            gpuPowerLimitW: hw.powerLimitW,
           };
           controller.enqueue(encoder.encode("data: " + JSON.stringify(payload) + "\n\n"));
         } catch (e) {
