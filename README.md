@@ -13,13 +13,13 @@ it's themable so you can brand it as your own.
 
 ## Why Cortex?
 
-The dashboard that ships with the DGX Spark is intentionally minimal — it gets the box
-online, but it doesn't surface the day-to-day operational detail you actually want from a
-local-AI machine: which models are resident in memory right now, per-model context
+The DGX Spark ships with a clean dashboard that gets you up and running quickly. Spending
+time with ours, we just found we wanted a deeper, at-a-glance view of what the box was
+doing day to day — which models are resident in memory right now, per-model context
 windows, GPU **power draw** (the only reliable activity signal on GB10's unified-memory
 architecture — see below), host OS / kernel / driver versions, and a live health check for
-every service you run. Running a Spark day to day, we found this level of detail genuinely
-useful — so we built it into one pane of glass. Cortex is that gap filled in.
+every service we run. That level of detail turned out to be genuinely useful, so we pulled
+it all onto a single pane of glass. Cortex is the result.
 
 > **On the name:** the cerebral *cortex* is the brain's integrative layer — a fitting
 > name for the surface that pulls together signals from all of your local-AI tools.
