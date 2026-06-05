@@ -1,5 +1,8 @@
 import { ServiceCard } from "../components/ServiceCard";
-import services from "@/data/services.json";
+import { getServices } from "@/app/lib/config";
+
+// Read cortex-config.json at request time so config edits apply without a rebuild.
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Services — Cortex",
@@ -13,13 +16,13 @@ export default function ServicesPage() {
           Local services
         </h2>
         <p className="mt-2 text-ink-400 max-w-2xl">
-          MindStone Agent runs on this Spark. Inference, image generation,
-          voice and the comms substrate live here — local, private, and always available.
+          Your local AI stack runs here. Inference, image generation, and the
+          comms substrate live on your own hardware — local, private, and always available.
         </p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-        {services.services.map((s) => (
-          <ServiceCard key={s.id} service={s as never} />
+        {getServices().map((s) => (
+          <ServiceCard key={s.id} service={s} />
         ))}
       </div>
     </div>

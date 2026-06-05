@@ -33,3 +33,6 @@ pnpm-debug.log*
 # Tailwind v4 generated CSS (if any)
 *.tsbuildinfo
 next-env.d.ts
+
+# User config (host-specific — never commit; copy from cortex-config.example.json)
+cortex-config.json

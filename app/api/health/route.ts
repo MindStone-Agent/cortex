@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
-import services from "@/data/services.json";
+import { getServices, type Service } from "@/app/lib/config";
 
 export const dynamic = "force-dynamic";
-
-type Service = (typeof services.services)[number];
 
 async function probe(s: Service): Promise<"up" | "down"> {
   try {
@@ -23,7 +21,7 @@ async function probe(s: Service): Promise<"up" | "down"> {
 
 export async function GET() {
   const results = await Promise.all(
-    services.services.map(async (s) => ({ id: s.id, status: await probe(s) }))
+    getServices().map(async (s) => ({ id: s.id, status: await probe(s) }))
   );
   return NextResponse.json({ checked: new Date().toISOString(), services: results });
 }
