@@ -1,0 +1,15 @@
+{
+  "$comment": "Copy to theme.json to white-label Cortex. Omit the file entirely to use the default Cortex brand. theme.json is gitignored.",
+  "brand": {
+    "name": "Cortex",
+    "tagline": "Local AI command center",
+    "logo": "/logo.svg"
+  },
+  "colors": {
+    "background": "#0a0a0a",
+    "surface": "#141414",
+    "accent": "#76b900",
+    "text": "#e5e5e5",
+    "muted": "#8a8a8a"
+  }
+}

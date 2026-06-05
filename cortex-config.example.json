@@ -1,0 +1,26 @@
+{
+  "$comment": "Copy to cortex-config.json and edit for your environment. All URLs below use localhost with each tool's standard default port — replace with your own hosts/ports. cortex-config.json is gitignored so your real setup never gets committed.",
+  "services": [
+    {
+      "name": "Ollama",
+      "category": "inference",
+      "url": "http://localhost:11434",
+      "healthPath": "/api/tags",
+      "icon": "ollama"
+    },
+    {
+      "name": "ComfyUI",
+      "category": "image",
+      "url": "http://localhost:8188",
+      "healthPath": "/system_stats",
+      "icon": "comfyui"
+    },
+    {
+      "name": "Open WebUI",
+      "category": "chat",
+      "url": "http://localhost:8080",
+      "healthPath": "/health",
+      "icon": "openwebui"
+    }
+  ]
+}
