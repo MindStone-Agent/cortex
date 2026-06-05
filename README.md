@@ -22,6 +22,12 @@ it's themable so you can brand it as your own.
 on GB10, so power leads), system + host versions, the currently-loaded model, and the full
 model inventory with per-model context windows.*
 
+![Cortex services page with live health checks](docs/services.png)
+
+*The services catalog: a configurable grid of the tools you run — each card with a live
+health check and a direct link. Edit the catalog in `cortex-config.json`, or let
+`/api/discover` find what's already listening on localhost.*
+
 ## Features
 
 - **Dashboard** — at-a-glance system health: CPU, GPU, disk, uptime, host OS/kernel/NVIDIA-
