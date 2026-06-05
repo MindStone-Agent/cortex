@@ -3,6 +3,7 @@ import os from "node:os";
 import { promises as fs } from "node:fs";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
+import { getHardware } from "@/app/lib/hardware";
 
 const execAsync = promisify(exec);
 
@@ -68,7 +69,12 @@ async function readDisk(): Promise<DiskInfo | null> {
 }
 
 export async function GET() {
-  const [memory, gpu, disk] = await Promise.all([readMemInfo(), readGpu(), readDisk()]);
+  const [memory, gpu, disk, hardware] = await Promise.all([
+    readMemInfo(),
+    readGpu(),
+    readDisk(),
+    getHardware(),
+  ]);
   return NextResponse.json({
     cpu: {
       cores: os.cpus().length,
@@ -78,6 +84,7 @@ export async function GET() {
     memory,
     gpu,
     disk,
+    hardware,
     uptimeSeconds: os.uptime(),
     timestamp: new Date().toISOString(),
   });
