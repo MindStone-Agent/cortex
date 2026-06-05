@@ -16,9 +16,11 @@ it's themable so you can brand it as your own.
 
 ## Screenshots
 
-_Dashboard screenshot coming soon._
+![Cortex dashboard running on an NVIDIA DGX Spark (GB10)](docs/dashboard.png)
 
-<!-- TODO: add dashboard screenshot (place under public/ or docs/ and reference here) -->
+*The dashboard live on a DGX Spark: power-primary GPU telemetry (utilization is unreliable
+on GB10, so power leads), system + host versions, the currently-loaded model, and the full
+model inventory with per-model context windows.*
 
 ## Features
 
