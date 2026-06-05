@@ -27,6 +27,7 @@ type OllamaModel = {
   quant: string;
   category: string;
   loaded: boolean;
+  contextLength: number | null;
 };
 
 type ComfyModel = { name: string; size: number; type: string };
@@ -42,6 +43,27 @@ function categorize(name: string, family: string): string {
   return "Reasoning";
 }
 
+// Context window lives in /api/show's model_info under "<arch>.context_length".
+async function fetchContextLength(name: string): Promise<number | null> {
+  try {
+    const res = await fetch("http://localhost:11434/api/show", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model: name }),
+      cache: "no-store",
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as { model_info?: Record<string, unknown> };
+    for (const [k, v] of Object.entries(json.model_info || {})) {
+      if (k.endsWith(".context_length") && typeof v === "number") return v;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 async function fetchOllama(): Promise<OllamaModel[] | null> {
   try {
     const [tagsRes, psRes] = await Promise.all([
@@ -52,7 +74,9 @@ async function fetchOllama(): Promise<OllamaModel[] | null> {
     const tagsJson = (await tagsRes.json()) as { models?: OllamaTag[] };
     const psJson = (await psRes.json()) as { models?: OllamaPsItem[] };
     const loaded = new Set((psJson.models || []).map((m) => m.name));
-    return (tagsJson.models || []).map((m) => {
+    const tags = tagsJson.models || [];
+    const contexts = await Promise.all(tags.map((m) => fetchContextLength(m.name)));
+    return tags.map((m, i) => {
       const family = m.details?.family || "";
       return {
         name: m.name,
@@ -63,6 +87,7 @@ async function fetchOllama(): Promise<OllamaModel[] | null> {
         quant: m.details?.quantization_level || "",
         category: categorize(m.name, family),
         loaded: loaded.has(m.name),
+        contextLength: contexts[i],
       };
     });
   } catch {

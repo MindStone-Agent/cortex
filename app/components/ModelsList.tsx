@@ -11,9 +11,13 @@ type OllamaModel = {
   quant: string;
   category: string;
   loaded: boolean;
+  contextLength: number | null;
 };
 
 type ComfyModel = { name: string; size: number; type: string };
+
+// Format a context window token count as e.g. 131072 -> "128K", 8192 -> "8K".
+const fmtCtx = (n: number) => (n >= 1024 ? Math.round(n / 1024) + "K" : String(n));
 
 type Data = {
   ollama: OllamaModel[] | null;
@@ -64,6 +68,11 @@ function OllamaRow({ m }: { m: OllamaModel }) {
       </div>
       <div className="flex items-center gap-3 text-xs font-mono text-ink-400 shrink-0">
         {m.paramSize && <span>{m.paramSize}</span>}
+        {m.contextLength != null && (
+          <span className="text-ink-500" title="Context window (tokens)">
+            {fmtCtx(m.contextLength)} ctx
+          </span>
+        )}
         {m.quant && <span className="text-ink-600">{m.quant}</span>}
         <span className="text-ink-300 w-16 text-right">{fmtGB(m.size)}</span>
       </div>
