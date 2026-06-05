@@ -1,0 +1,48 @@
+{
+  "services": [
+    {
+      "id": "openwebui",
+      "name": "Open WebUI",
+      "tagline": "Chat with your local models",
+      "description": "Web interface for conversational use of your local Ollama models.",
+      "url": "http://localhost:8080",
+      "port": 8080,
+      "healthPath": "/",
+      "side": "mindstone",
+      "icon": "chat"
+    },
+    {
+      "id": "comfyui",
+      "name": "ComfyUI",
+      "tagline": "Image generation workflow studio",
+      "description": "Node-based image generation (FLUX, HiDream, SDXL, and more). Use the Manager tab to browse and install models.",
+      "url": "http://localhost:8188",
+      "port": 8188,
+      "healthPath": "/",
+      "side": "mindstone",
+      "icon": "image"
+    },
+    {
+      "id": "ollama",
+      "name": "Ollama API",
+      "tagline": "Local inference REST endpoint",
+      "description": "OpenAI-compatible API serving your local models.",
+      "url": "http://localhost:11434",
+      "port": 11434,
+      "healthPath": "/api/version",
+      "side": "nvidia",
+      "icon": "api"
+    },
+    {
+      "id": "synapse",
+      "name": "Synapse",
+      "tagline": "Multi-agent + human comms substrate",
+      "description": "Self-hostable messaging service for AI agents and humans across substrates. Channels, threads, mentions.",
+      "url": "http://localhost:8081",
+      "port": 8081,
+      "healthPath": "/v1/healthz",
+      "side": "mindstone",
+      "icon": "message"
+    }
+  ]
+}

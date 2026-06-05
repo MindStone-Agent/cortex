@@ -1,57 +1,67 @@
 # Cortex
 
-**The MindStone Agent command center — a self-hostable web UI for your local AI stack.**
+**The MindStone Agent command center for NVIDIA GB10 platforms.**
 
-Cortex is a single landing surface for a local-inference environment. It gives you a
-live dashboard of system and GPU health, a view of the models currently loaded across
-your inference and image-generation tools, and a configurable catalog of the services
-you run (inference servers, image pipelines, chat UIs, agent comms, and more).
+Cortex is a self-hostable web UI for a local AI stack. It gives you a single landing
+page and live dashboard: system and GPU health, the models currently loaded across your
+inference and image tools, and a configurable catalog of the services you run (Ollama,
+ComfyUI, Open WebUI, and more).
 
-It's built for an [NVIDIA DGX Spark](https://www.nvidia.com/en-us/products/workstations/dgx-spark/)
-or any modern Linux host running a local AI stack, and it's fully themable so you can
-brand it as your own.
+Cortex is built specifically for [NVIDIA GB10-based platforms](https://www.nvidia.com/en-us/products/workstations/dgx-spark/) —
+it was developed on the **NVIDIA DGX Spark**, the GB10-powered reference platform — and
+it's themable so you can brand it as your own.
 
 > **On the name:** the cerebral *cortex* is the brain's integrative layer — a fitting
 > name for the surface that pulls together signals from all of your local-AI tools.
 
----
+## Screenshots
+
+_Dashboard screenshot coming soon._
+
+<!-- TODO: add dashboard screenshot (place under public/ or docs/ and reference here) -->
 
 ## Features
 
-- **Dashboard** — at-a-glance system health: CPU, RAM, GPU, disk, and network.
-- **Live performance (Server-Sent Events)** — ~1-second streaming telemetry: GPU
-  utilization / memory / power draw / temperature, per-core CPU, RAM, disk I/O, and
-  network I/O.
-- **Models view** — discovers models from your inference server (e.g. Ollama's
-  `/api/tags` and `/api/ps`) and from local model directories (e.g. ComfyUI
-  `checkpoints` / `unet` / `vae` / `loras`), categorized via a manifest with an
-  auto-detect fallback, and shows what's currently loaded.
-- **Services catalog** — a configurable list of the tools you run, each with a health
-  check and a quick link. Combines auto-discovery with a known-services catalog.
-- **Theming & white-labeling** — ships with a default "Cortex" brand that you can fully
-  override (name, logo, color tokens) via a theme file.
+- **Dashboard** — at-a-glance system health: CPU, unified memory, GPU (utilization /
+  temperature / power), disk, and uptime.
+- **Live performance (Server-Sent Events)** — a 1 Hz telemetry stream of CPU %, memory %,
+  GPU utilization, GPU temperature, and GPU power draw.
+- **Models view** — discovers loaded and available models from your inference server
+  (Ollama `/api/tags` + `/api/ps`) and categorizes them.
+- **Services catalog** — a configurable grid of the tools you run, each with a live
+  health check and a quick link.
+- **Themable** — ships with the default MindStone Agent brand (a warm "ink" palette with
+  MindStone gold and NVIDIA green accents); fully overridable as the theme work lands.
 
-## Architecture
+## Status
 
-| Layer | Technology |
+Active development — currently **v0.2** (dashboard complete).
+
+| Milestone | State |
 | --- | --- |
-| Framework | Next.js 15 (App Router, TypeScript, Turbopack) |
-| Styling | Tailwind CSS 4 (CSS-first `@theme`) |
-| Reverse proxy | Caddy 2 (routing + TLS) |
-| Runtime | Node 22, pnpm |
-| Process management | systemd (user unit) |
-| Data sources | Local inference / tooling HTTP APIs (endpoints are configurable) |
+| Services landing page with health checks | ✅ Done |
+| Dashboard — system stats (CPU / memory / GPU / disk / uptime) | ✅ Done |
+| Live performance telemetry over SSE | ✅ Done |
+| Models view (Ollama) | ✅ Done |
+| Portability refactor — config-driven services, auto-discovery, `install.sh` | ◻ Planned (v0.3) |
+| Theme overrides (rebrandable) | ◻ Planned (v0.3) |
+| Public release — docs, screenshots, demo | ◻ Planned (v1.0) |
 
-Cortex ships with **no hardcoded hosts** — every endpoint is something you point at your
-own environment via configuration.
+## Stack
+
+- **Next.js 16** (App Router, TypeScript, Turbopack)
+- **Tailwind CSS 4** (CSS-first `@theme`)
+- **Caddy** reverse proxy (`:80`)
+- **Node 22** · **pnpm 9** (pinned — see notes below)
+- **systemd** user unit for process management (linger required)
 
 ## Requirements
 
-- A Linux host. Built and tested on an NVIDIA DGX Spark; any modern Linux box running a
-  local AI stack works.
-- Node 22+ and pnpm.
-- *(Optional)* Caddy, for reverse proxy and TLS in front of the app.
-- *(Optional)* NVIDIA drivers and `nvidia-smi`, for GPU telemetry.
+- An NVIDIA GB10 platform (developed on the DGX Spark; any Linux host with a local AI
+  stack works for development).
+- Node 22+ and pnpm 9.
+- *(Optional)* Caddy for reverse proxy / TLS.
+- *(Optional)* NVIDIA drivers and `nvidia-smi` for GPU telemetry.
 
 ## Quick start
 
@@ -60,48 +70,31 @@ git clone https://github.com/MindStone-Agent/cortex.git
 cd cortex
 pnpm install
 
-# Point Cortex at your own services and endpoints:
-cp cortex-config.example.json cortex-config.json
+# Point Cortex at your own services:
+#   edit data/services.json (url / port / healthPath for each service)
 
 pnpm dev          # development server on http://localhost:3000
 ```
 
-For production:
-
-```bash
-pnpm build
-pnpm start        # serve the built app (typically behind Caddy)
-```
+For production: `pnpm build && pnpm start`, typically behind Caddy.
 
 ## Configuration
 
-Cortex is config-driven. Copy the example files and edit them to match your environment —
-nothing host-specific is baked into the source.
+Services are declared in [`data/services.json`](data/services.json). Each entry has an
+`id`, `name`, `tagline`, `description`, `url`, `port`, `healthPath`, an `icon`, and a
+`side` (`"mindstone"` or `"nvidia"`) that selects its accent color. The shipped file uses
+`localhost` defaults — edit it to match your own hosts and ports. Models are read from a
+local Ollama instance (`localhost:11434`) by the models API.
 
-- **`cortex-config.json`** — declares the services Cortex should surface. Each entry has
-  a name, base URL, optional health endpoint, category, and icon. Start from
-  [`cortex-config.example.json`](cortex-config.example.json).
-- **`theme.json`** — brand overrides: display name, logo path, and color tokens. Start
-  from [`theme.example.json`](theme.example.json). Leave it out to use the default Cortex
-  brand.
+> A portable, schema-driven config (`cortex-config.json`) and auto-discovery are on the
+> v0.3 roadmap; today, `data/services.json` is the single source of truth.
 
-All endpoints in the examples use `localhost` with each tool's standard default port —
-replace them with your own.
+## Notes
 
-## Roadmap
-
-- [x] Services landing page with health checks
-- [ ] Dashboard with system stats (CPU / RAM / GPU / disk / network)
-- [ ] Live performance telemetry over SSE
-- [ ] Models view (inference servers + image pipelines)
-- [ ] Service auto-discovery + known-services catalog
-- [ ] One-command installer
-- [ ] Theming / white-label polish
-
-## Contributing
-
-Issues and pull requests are welcome. A `CONTRIBUTING.md` with development setup and
-conventions will land alongside the application code.
+- **pnpm is pinned to 9.x.** pnpm 10/11 changed the build-script approval flow in a way
+  that fights the install-during-build step; pnpm 9 avoids it.
+- **Tailwind 4** uses the CSS-first `@theme` directive in `app/globals.css` (no
+  `tailwind.config.js`).
 
 ## License
 

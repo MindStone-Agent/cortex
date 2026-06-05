@@ -1,37 +1,35 @@
-# Local configuration (host-specific — never commit)
-cortex-config.json
-theme.json
-
 # Dependencies
-node_modules/
-.pnpm-store/
+node_modules
+.pnpm-store
 
-# Next.js build output
-.next/
-out/
-build/
-dist/
+# Next.js
+.next
+out
 
-# Env / secrets
+# Production / build
+build
+dist
+
+# Local env
 .env
-.env.*
-!.env.example
+.env.local
+.env.*.local
+
+# Editor / OS
+.DS_Store
+.vscode
+.idea
+*.swp
 
 # Logs
 *.log
 npm-debug.log*
 pnpm-debug.log*
 
-# OS files
-.DS_Store
-Thumbs.db
+# Backup files (from sed edits during dev)
+*.bak
+*.bak2
 
-# Editor / IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# TypeScript
+# Tailwind v4 generated CSS (if any)
 *.tsbuildinfo
 next-env.d.ts
