@@ -36,3 +36,6 @@ next-env.d.ts
 
 # User config (host-specific — never commit; copy from cortex-config.example.json)
 cortex-config.json
+
+# User theme overrides (host-specific brand — never commit)
+theme.json
