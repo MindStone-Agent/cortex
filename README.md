@@ -18,7 +18,8 @@ online, but it doesn't surface the day-to-day operational detail you actually wa
 local-AI machine: which models are resident in memory right now, per-model context
 windows, GPU **power draw** (the only reliable activity signal on GB10's unified-memory
 architecture — see below), host OS / kernel / driver versions, and a live health check for
-every service you run. Cortex was built to fill that gap with a single pane of glass.
+every service you run. Running a Spark day to day, we found this level of detail genuinely
+useful — so we built it into one pane of glass. Cortex is that gap filled in.
 
 > **On the name:** the cerebral *cortex* is the brain's integrative layer — a fitting
 > name for the surface that pulls together signals from all of your local-AI tools.
