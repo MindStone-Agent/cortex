@@ -5,6 +5,9 @@ import { Header } from "./components/Header";
 import { loadTheme, themeStyle } from "./lib/theme";
 import "./globals.css";
 
+// Render at runtime so theme.json edits (e.g. from Settings) apply without a rebuild.
+export const dynamic = "force-dynamic";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],

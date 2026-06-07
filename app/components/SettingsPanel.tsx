@@ -1,43 +1,42 @@
 "use client";
 
 import { createPortal } from "react-dom";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import type { Brand } from "../lib/theme";
 
 export function SettingsPanel({
   open,
   onClose,
-  brand,
+  showNvidiaLogo,
+  onShowNvidiaLogoChange,
 }: {
   open: boolean;
   onClose: () => void;
-  brand: Brand;
+  showNvidiaLogo: boolean;
+  onShowNvidiaLogoChange: (value: boolean) => void;
 }) {
-  const router = useRouter();
-  const [showNvidia, setShowNvidia] = useState(brand.showNvidiaLogo);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
 
-  const save = async (patch: Partial<Brand>) => {
+  const toggleNvidiaLogo = async (value: boolean) => {
+    onShowNvidiaLogoChange(value); // instant visual
     setSaving(true);
     setError(null);
     try {
       const res = await fetch("/api/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ brand: patch }),
+        body: JSON.stringify({ brand: { showNvidiaLogo: value } }),
       });
       const json = (await res.json()) as { ok: boolean; error?: string };
       if (!res.ok || !json.ok) {
+        onShowNvidiaLogoChange(!value); // revert on failure
         setError(json.error ?? "Failed to save.");
-        return;
       }
-      router.refresh(); // re-render server components (header) with the new theme
     } catch (e) {
+      onShowNvidiaLogoChange(!value);
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setSaving(false);
@@ -70,12 +69,9 @@ export function SettingsPanel({
               <span className="text-sm text-ink-200">Show NVIDIA logo</span>
               <input
                 type="checkbox"
-                checked={showNvidia}
+                checked={showNvidiaLogo}
                 disabled={saving}
-                onChange={(e) => {
-                  setShowNvidia(e.target.checked);
-                  save({ showNvidiaLogo: e.target.checked });
-                }}
+                onChange={(e) => toggleNvidiaLogo(e.target.checked)}
                 className="h-4 w-4 accent-gold-500 cursor-pointer"
               />
             </label>
@@ -104,7 +100,7 @@ export function SettingsPanel({
           {error && <p className="text-[11px] text-error">{error}</p>}
           {saving && <p className="text-[11px] text-ink-400">Saving…</p>}
         </div>
-    </div>
+      </div>
     </>,
     document.body
   );

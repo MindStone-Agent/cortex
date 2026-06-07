@@ -15,6 +15,9 @@ const navItems = [
 export function Header({ hostname, brand }: { hostname: string; brand: Brand }) {
   const pathname = usePathname();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // Drive the NVIDIA logo from client state so the toggle hides it instantly;
+  // the server prop (brand) seeds it and persistence is handled in the panel.
+  const [showNvidiaLogo, setShowNvidiaLogo] = useState(brand.showNvidiaLogo);
   return (
     <header className="sticky top-0 z-50 w-full border-b border-ink-800 bg-ink-950/85 backdrop-blur-md">
       <div className="mx-auto max-w-7xl px-6 py-4 flex items-center justify-between gap-6">
@@ -73,7 +76,7 @@ export function Header({ hostname, brand }: { hostname: string; brand: Brand }) 
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
             </svg>
           </button>
-          {brand.showNvidiaLogo && (
+          {showNvidiaLogo && (
             <Image
               src="/logos/nvidia-horz-white.svg"
               alt="NVIDIA"
@@ -84,7 +87,12 @@ export function Header({ hostname, brand }: { hostname: string; brand: Brand }) 
           )}
         </div>
       </div>
-      <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} brand={brand} />
+      <SettingsPanel
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        showNvidiaLogo={showNvidiaLogo}
+        onShowNvidiaLogoChange={setShowNvidiaLogo}
+      />
     </header>
   );
 }
