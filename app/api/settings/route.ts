@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import fs from "node:fs";
 import path from "node:path";
-import { loadTheme, type Brand } from "@/app/lib/theme";
+import { loadTheme, readRawTheme, type Brand, type RawTheme } from "@/app/lib/theme";
 import { THEME_PRESETS, DEFAULT_THEME_ID, themePresetById } from "@/app/lib/themes";
 
 export const dynamic = "force-dynamic";
@@ -28,24 +28,27 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const current = loadTheme();
-  // Start from the current theme; name + logo are the fixed identity and are
-  // only ever changed via an explicit body.brand (the UI never sends them).
-  const next = {
-    themeId: current.themeId ?? DEFAULT_THEME_ID,
-    brand: { ...current.brand },
-    colors: { ...current.colors },
-  };
+  // Work on the RAW stored overrides so we never bake preset-derived values into
+  // the file (the preset stays the source of truth for subtitle + palette).
+  const next: RawTheme = (() => {
+    const raw = readRawTheme();
+    return {
+      themeId: raw.themeId ?? DEFAULT_THEME_ID,
+      brand: { ...(raw.brand ?? {}) },
+      colors: { ...(raw.colors ?? {}) },
+    };
+  })();
 
-  // Applying a preset swaps the subtitle + palette; name + logo stay put.
+  // Applying a preset: select it and clear stored subtitle/palette overrides so the
+  // preset drives them. Name + logo (identity) are left untouched.
   if (body.themeId !== undefined) {
     const preset = themePresetById(body.themeId);
     if (!preset) {
       return NextResponse.json({ ok: false, error: "Unknown theme." }, { status: 400 });
     }
     next.themeId = preset.id;
-    next.brand.tagline = preset.tagline;
-    next.colors = { ...preset.colors };
+    if (next.brand) delete next.brand.tagline;
+    next.colors = {};
   }
 
   // Other cosmetic patches (e.g. the NVIDIA-logo toggle, manual color tweaks).
@@ -54,7 +57,7 @@ export async function POST(req: Request) {
 
   try {
     fs.writeFileSync(THEME_FILE, JSON.stringify(next, null, 2) + "\n", "utf8");
-    return NextResponse.json({ ok: true, theme: next });
+    return NextResponse.json({ ok: true, theme: loadTheme() });
   } catch (e) {
     return NextResponse.json(
       { ok: false, error: e instanceof Error ? e.message : "Failed to write theme.json" },

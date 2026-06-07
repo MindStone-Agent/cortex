@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { themePresetById, DEFAULT_THEME_ID } from "./themes";
 
 export type Brand = {
   name: string;
@@ -14,48 +15,69 @@ export type Theme = {
   /**
    * Overrides for Tailwind `@theme` color tokens, keyed WITHOUT the `--color-`
    * prefix (e.g. "gold-500", "nvgreen-500"). Emitted as a `:root` block that
-   * cascades over the compiled defaults. Omit to keep the default palette.
+   * cascades over the compiled defaults.
    */
   colors: Record<string, string>;
   /** Active theme-preset id (see lib/themes.ts). Drives the in-UI selector. */
   themeId?: string;
 };
 
-const DEFAULT_THEME: Theme = {
-  brand: {
-    name: "Cortex",
-    tagline: "DGX Spark command center",
-    logo: "/logos/mindstone.png",
-    showNvidiaLogo: true,
-  },
-  colors: {},
-  themeId: "dgx-spark",
+export type RawTheme = {
+  brand?: Partial<Brand>;
+  colors?: Record<string, string>;
+  themeId?: string;
 };
 
 /**
- * Load branding/theme at runtime (server-side).
- *   1. theme.json          — your overrides (gitignored, never committed)
- *   2. theme.example.json  — the shipped default
- * Falls back to the built-in Cortex defaults. Read per call so edits apply
- * without a rebuild. To rebrand: `cp theme.example.json theme.json` and edit.
+ * Fixed brand identity. The name and logo do NOT change with the theme — only the
+ * subtitle (tagline) and palette do. tagline here is a fallback; the active theme
+ * preset supplies the real one.
  */
-export function loadTheme(): Theme {
-  const root = process.cwd();
-  for (const file of [path.join(root, "theme.json"), path.join(root, "theme.example.json")]) {
+const DEFAULT_BRAND: Brand = {
+  name: "Cortex",
+  tagline: "DGX Spark command center",
+  logo: "/logos/mindstone.png",
+  showNvidiaLogo: true,
+};
+
+const THEME_JSON = path.join(process.cwd(), "theme.json");
+const THEME_EXAMPLE = path.join(process.cwd(), "theme.example.json");
+
+/**
+ * Read the stored theme overrides verbatim — theme.json (your settings, gitignored)
+ * then theme.example.json (the shipped default) — WITHOUT resolving the preset. Used
+ * by the settings writer so a save doesn't bake preset-derived values into the file.
+ */
+export function readRawTheme(): RawTheme {
+  for (const file of [THEME_JSON, THEME_EXAMPLE]) {
     try {
-      if (fs.existsSync(file)) {
-        const t = JSON.parse(fs.readFileSync(file, "utf8")) as Partial<Theme>;
-        return {
-          brand: { ...DEFAULT_THEME.brand, ...(t.brand ?? {}) },
-          colors: t.colors ?? {},
-          themeId: t.themeId ?? DEFAULT_THEME.themeId,
-        };
-      }
+      if (fs.existsSync(file)) return JSON.parse(fs.readFileSync(file, "utf8")) as RawTheme;
     } catch {
       // malformed — try the next candidate
     }
   }
-  return DEFAULT_THEME;
+  return {};
+}
+
+/**
+ * Resolve the active theme: the selected preset supplies the subtitle + palette,
+ * then any explicit overrides in theme.json win on top. Name + logo come from the
+ * fixed identity (overridable only via an explicit brand entry). Read per call so
+ * edits apply without a rebuild.
+ */
+export function loadTheme(): Theme {
+  const raw = readRawTheme();
+  const themeId = raw.themeId ?? DEFAULT_THEME_ID;
+  const preset = themePresetById(themeId);
+  return {
+    themeId,
+    brand: {
+      ...DEFAULT_BRAND,
+      ...(preset ? { tagline: preset.tagline } : {}),
+      ...(raw.brand ?? {}),
+    },
+    colors: { ...(preset?.colors ?? {}), ...(raw.colors ?? {}) },
+  };
 }
 
 /** Build a `:root { --color-...: ... }` override block from theme.colors (or "" if none). */

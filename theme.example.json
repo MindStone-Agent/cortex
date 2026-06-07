@@ -1,14 +1,9 @@
 {
-  "$comment": "Copy to theme.json to rebrand Cortex (gitignored). Pick a theme in the UI (Settings -> Theme) or edit here. themeId selects a built-in preset (see app/lib/themes.ts). brand.name + brand.logo are the fixed identity; tagline + colors are themeable. brand.logo is a path under public/. colors override Tailwind @theme tokens by name (no --color- prefix).",
+  "$comment": "Copy to theme.json to customize Cortex (gitignored). Pick a theme in the UI (Settings -> Theme) or set themeId here; the preset (see app/lib/themes.ts) supplies the subtitle + color palette. brand.name + brand.logo are the fixed identity. To hand-tune, add a brand.tagline or colors map (token name -> value, e.g. \"gold-500\": \"#...\") and they win over the preset.",
   "themeId": "dgx-spark",
   "brand": {
     "name": "Cortex",
-    "tagline": "DGX Spark command center",
     "logo": "/logos/mindstone.png",
     "showNvidiaLogo": true
-  },
-  "colors": {
-    "gold-500": "#F2B23E",
-    "nvgreen-500": "#76B900"
   }
 }

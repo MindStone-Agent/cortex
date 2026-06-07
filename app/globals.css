@@ -47,8 +47,8 @@ body::before {
   position: fixed;
   inset: 0;
   background:
-    radial-gradient(60% 50% at 0% 0%, rgba(242, 178, 62, 0.10) 0%, transparent 60%),
-    radial-gradient(60% 50% at 100% 100%, rgba(118, 185, 0, 0.08) 0%, transparent 60%);
+    radial-gradient(60% 50% at 0% 0%, color-mix(in srgb, var(--color-gold-500) 10%, transparent) 0%, transparent 60%),
+    radial-gradient(60% 50% at 100% 100%, color-mix(in srgb, var(--color-nvgreen-500) 8%, transparent) 0%, transparent 60%);
   pointer-events: none;
   z-index: 0;
 }
