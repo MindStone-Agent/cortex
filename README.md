@@ -176,6 +176,26 @@ commands via `execFile` (no shell, and nothing user-controlled ever reaches the 
 the UI only selects *which* catalog entry to install). As with the Ollama updater, only
 enable this on a trusted LAN deployment; left off, the Tools panel is read-only status.
 
+### Remote access via Tailscale (opt-in)
+
+To reach Cortex from outside your LAN without exposing it to the internet, use
+[Tailscale](https://tailscale.com/). **Settings → Remote access** can install and control
+it from the UI: connect/disconnect, show the tailnet IP, and surface the one-time login URL.
+
+It's **off by default** and gated like the other system actions. Enable it with:
+
+```bash
+sudo ./scripts/enable-tailscale-control.sh        # installs Tailscale + a scoped wrapper + sudoers
+# then set  "system": { "tailscale": true }  in cortex-config.json and restart Cortex
+```
+
+`enable-tailscale-control.sh` grants the Cortex web user passwordless sudo for **only the
+three fixed verbs** (`status` / `up` / `down`) of one root-owned wrapper
+([`scripts/cortex-tailscale.sh`](scripts/cortex-tailscale.sh)) — nothing else. The first
+**Connect** prints a login URL you visit to authenticate the node to your own tailnet. Note
+that, like Cortex itself, this control is unauthenticated on the LAN — only enable it on a
+trusted network. To revoke: `rm /etc/sudoers.d/cortex-tailscale` and set the flag to `false`.
+
 ## Security
 
 Cortex is built for a **single trusted machine on a private LAN**. By design it has
@@ -195,6 +215,9 @@ hardening steps.
 - **[`scripts/install.sh`](scripts/install.sh)** — single-command setup (above); idempotent.
 - **[`scripts/enable-ollama-update.sh`](scripts/enable-ollama-update.sh)** — opt in to
   UI-driven Ollama updates (scoped passwordless-sudo wrapper); see above.
+- **[`scripts/enable-tailscale-control.sh`](scripts/enable-tailscale-control.sh)** — opt in
+  to UI-driven Tailscale control (installs Tailscale + a verb-pinned scoped wrapper); see
+  *Remote access via Tailscale* above.
 - **[`scripts/setup-openwebui.sh`](scripts/setup-openwebui.sh)** — points Open WebUI at host
   Ollama (off the bundled-Ollama `:ollama` image onto `:main`, preserving the data volume)
   and sets `ENABLE_RAG_LOCAL_WEB_FETCH=true` so private-LAN ComfyUI image URLs aren't

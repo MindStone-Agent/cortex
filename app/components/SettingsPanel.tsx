@@ -3,6 +3,7 @@
 import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
 import { ToolsManager } from "./ToolsManager";
+import { TailscalePanel } from "./TailscalePanel";
 
 type Preset = { id: string; label: string; tagline: string };
 
@@ -178,6 +179,11 @@ export function SettingsPanel({
           <section>
             <h3 className="text-xs uppercase tracking-wider text-ink-400 mb-3">Tools &amp; installs</h3>
             <ToolsManager />
+          </section>
+
+          <section>
+            <h3 className="text-xs uppercase tracking-wider text-ink-400 mb-3">Remote access</h3>
+            <TailscalePanel />
           </section>
 
           <p className="text-[11px] text-ink-500 leading-snug border-t border-ink-800 pt-4">

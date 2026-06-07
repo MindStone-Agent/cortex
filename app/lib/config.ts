@@ -29,6 +29,14 @@ export type SystemConfig = {
    * enabling is just a deliberate opt-in. Only turn this on for a trusted LAN box.
    */
   toolInstall?: boolean;
+  /**
+   * Allow the Cortex UI to control Tailscale (status / connect / disconnect) via a
+   * scoped, passwordless-sudo wrapper. OFF by default (see
+   * scripts/enable-tailscale-control.sh, which installs Tailscale + a root-owned
+   * verb-pinned wrapper + a tight sudoers rule). This lets anyone on the LAN toggle
+   * the VPN — only turn it on for a trusted LAN box.
+   */
+  tailscale?: boolean;
 };
 
 export type CortexConfig = {
@@ -74,6 +82,7 @@ export function getSystemConfig(): Required<SystemConfig> {
   return {
     ollamaUpdate: sys.ollamaUpdate === true,
     toolInstall: sys.toolInstall === true,
+    tailscale: sys.tailscale === true,
   };
 }
 

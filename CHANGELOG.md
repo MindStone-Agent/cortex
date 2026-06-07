@@ -14,6 +14,11 @@ standalone identity (neutral by default), a verified clean install on a stock
 DGX Spark, an honest security story, and a demo + landing pitch.
 
 ### Added
+- **Tailscale control** (Settings → Remote access, toward v1.0, #21) — install and control
+  Tailscale from the UI (status, connect/disconnect, tailnet IP, one-time login URL) as the
+  recommended remote-access path. Off by default behind `system.tailscale`; enable with
+  `scripts/enable-tailscale-control.sh`, which installs Tailscale + a root-owned wrapper
+  pinned to three verbs (`status`/`up`/`down`) + a tight sudoers rule.
 - **Security documentation + posture** (toward v1.0, #16) — a `SECURITY.md` threat
   model (no auth / LAN-only by default, exactly what's exposed, the opt-in privileged
   actions and how to revoke them, and hardening: proxy `basic_auth`, binding to localhost,
