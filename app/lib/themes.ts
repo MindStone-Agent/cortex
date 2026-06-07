@@ -1,16 +1,16 @@
 /**
  * Built-in theme presets, selectable from Settings → Theme.
  *
- * A theme varies the **subtitle** (header tagline) and the **color palette**.
- * It deliberately does NOT touch the product name ("Cortex") or the logo — those
- * are the fixed brand identity and stay constant across every theme.
+ * A theme varies the **logo**, the **subtitle** (header tagline), and the **color
+ * palette**. It deliberately does NOT touch the product name ("Cortex") — that is
+ * the fixed identity and stays constant across every theme.
  *
  * Palettes override Tailwind @theme tokens by name. The UI's primary accent uses
  * the `gold-*` token ramp and the NVIDIA accent uses `nvgreen-*`; a preset can
  * remap either ramp wholesale to recolor the whole UI.
  *
  * To add a theme: append an entry here. The Settings panel lists them automatically;
- * selecting one writes its tagline + colors into theme.json (name/logo preserved).
+ * selecting one writes its logo + tagline + colors into theme.json (name preserved).
  */
 
 export type ThemePreset = {
@@ -18,6 +18,8 @@ export type ThemePreset = {
   label: string;
   /** Header subtitle for this theme. */
   tagline: string;
+  /** Logo path under public/ for this theme. */
+  logo: string;
   /** Tailwind @theme token overrides (keyed without the `--color-` prefix). */
   colors: Record<string, string>;
 };
@@ -57,17 +59,19 @@ export const THEME_PRESETS: ThemePreset[] = [
     id: "dgx-spark",
     label: "DGX Spark",
     tagline: "DGX Spark command center",
+    logo: "/logos/cortex.svg",
     colors: { ...GREEN_PRIMARY, ...NVGREEN },
   },
   {
     id: "mindstone",
     label: "MindStone",
     tagline: "MindStone command center",
+    logo: "/logos/mindstone.png",
     colors: { ...GOLD_PRIMARY, ...NVGREEN },
   },
 ];
 
-/** The default theme for a fresh install (neutral, non-MindStone subtitle). */
+/** The default theme for a fresh install (neutral, non-MindStone). */
 export const DEFAULT_THEME_ID = "dgx-spark";
 
 export function themePresetById(id: string): ThemePreset | undefined {

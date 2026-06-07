@@ -1,9 +1,8 @@
 {
-  "$comment": "Copy to theme.json to customize Cortex (gitignored). Pick a theme in the UI (Settings -> Theme) or set themeId here; the preset (see app/lib/themes.ts) supplies the subtitle + color palette. brand.name + brand.logo are the fixed identity. To hand-tune, add a brand.tagline or colors map (token name -> value, e.g. \"gold-500\": \"#...\") and they win over the preset.",
+  "$comment": "Copy to theme.json to customize Cortex (gitignored). Pick a theme in the UI (Settings -> Theme) or set themeId here; the preset (see app/lib/themes.ts) supplies the logo, subtitle, and color palette. brand.name is the fixed identity. To hand-tune, add a brand.logo / brand.tagline / colors map (token name -> value, e.g. \"gold-500\": \"#...\") and they win over the preset.",
   "themeId": "dgx-spark",
   "brand": {
     "name": "Cortex",
-    "logo": "/logos/mindstone.png",
     "showNvidiaLogo": true
   }
 }

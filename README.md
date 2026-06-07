@@ -133,10 +133,10 @@ gitignored so your setup never gets committed.
   ports and returns what it finds.
 - **`theme.json`** (copy from `theme.example.json`) — appearance. Pick a **theme** from
   **Settings → Theme** in the UI (e.g. *DGX Spark* or *MindStone*) — a theme sets the
-  header subtitle and color palette. The product **name (Cortex)** and **logo** are the
-  fixed identity and don't change with the theme. For finer control, edit `brand`
-  (name / logo / tagline) and `colors` (override any Tailwind `@theme` token by name,
-  e.g. `gold-500`) directly; add your own theme presets in `app/lib/themes.ts`.
+  **logo**, header **subtitle**, and **color palette**. The product **name (Cortex)** is
+  the one fixed bit of identity. For finer control, edit `brand` (name / logo / tagline)
+  and `colors` (override any Tailwind `@theme` token by name, e.g. `gold-500`) directly;
+  add your own theme presets in `app/lib/themes.ts`.
 
 Models are read from a local Ollama instance (`localhost:11434`).
 

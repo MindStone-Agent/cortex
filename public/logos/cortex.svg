@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <title>Cortex</title>
+  <path d="M34.3 11.7 A16 16 0 1 0 34.3 36.3" stroke="#F2B23E" stroke-width="3.2" stroke-linecap="round"/>
+  <path d="M31.07 15.57 A11 11 0 1 0 31.07 32.43" stroke="#F2B23E" stroke-width="3.2" stroke-linecap="round"/>
+  <path d="M27.86 19.4 A6 6 0 1 0 27.86 28.6" stroke="#F2B23E" stroke-width="3.2" stroke-linecap="round"/>
+  <circle cx="24" cy="24" r="2.6" fill="#F2B23E"/>
+</svg>

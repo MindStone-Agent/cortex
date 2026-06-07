@@ -15,17 +15,18 @@ DGX Spark, an honest security story, and a demo + landing pitch.
 
 ### Added
 - **Theme selector** (Settings → Theme) — pick a built-in theme preset from the UI;
-  applying one swaps the header **subtitle** and **color palette** and persists to
-  `theme.json`. Ships with **DGX Spark** (default) and **MindStone** presets; add more
-  in `app/lib/themes.ts`.
+  applying one swaps the **logo**, header **subtitle**, and **color palette** and
+  persists to `theme.json`. Ships with **DGX Spark** (default — Cortex glyph, NVIDIA-green
+  palette) and **MindStone** (gold diamond, gold palette) presets; add more in
+  `app/lib/themes.ts`.
 
 ### Changed
 - **Neutral by default** (toward v1.0, #14) — the shipped default no longer assumes
-  MindStone branding. The default subtitle is now "DGX Spark command center". The product
-  **name (Cortex)** and **logo** are fixed identity and do not change with the theme; a
-  theme varies only the subtitle + palette. The service-card accent value
-  `side: "mindstone"` is now `side: "primary"` (`"nvidia"` unchanged; legacy `"mindstone"`
-  still renders as the primary accent).
+  MindStone branding. The default theme is **DGX Spark** (Cortex glyph logo, "DGX Spark
+  command center" subtitle, NVIDIA-green palette). The product **name (Cortex)** is the
+  one fixed bit of identity; a theme varies the logo, subtitle, and palette. The
+  service-card accent value `side: "mindstone"` is now `side: "primary"` (`"nvidia"`
+  unchanged; legacy `"mindstone"` still renders as the primary accent).
 
 ## [0.4.0] — 2026-06-07
 

@@ -29,14 +29,14 @@ export type RawTheme = {
 };
 
 /**
- * Fixed brand identity. The name and logo do NOT change with the theme — only the
- * subtitle (tagline) and palette do. tagline here is a fallback; the active theme
- * preset supplies the real one.
+ * Brand identity defaults. The name does NOT change with the theme; the logo,
+ * subtitle (tagline), and palette do. tagline + logo here are fallbacks — the
+ * active theme preset supplies the real ones.
  */
 const DEFAULT_BRAND: Brand = {
   name: "Cortex",
   tagline: "DGX Spark command center",
-  logo: "/logos/mindstone.png",
+  logo: "/logos/cortex.svg",
   showNvidiaLogo: true,
 };
 
@@ -60,10 +60,10 @@ export function readRawTheme(): RawTheme {
 }
 
 /**
- * Resolve the active theme: the selected preset supplies the subtitle + palette,
- * then any explicit overrides in theme.json win on top. Name + logo come from the
- * fixed identity (overridable only via an explicit brand entry). Read per call so
- * edits apply without a rebuild.
+ * Resolve the active theme: the selected preset supplies the logo + subtitle +
+ * palette, then any explicit overrides in theme.json win on top. The name comes
+ * from the fixed identity (overridable only via an explicit brand entry). Read per
+ * call so edits apply without a rebuild.
  */
 export function loadTheme(): Theme {
   const raw = readRawTheme();
@@ -73,7 +73,7 @@ export function loadTheme(): Theme {
     themeId,
     brand: {
       ...DEFAULT_BRAND,
-      ...(preset ? { tagline: preset.tagline } : {}),
+      ...(preset ? { tagline: preset.tagline, logo: preset.logo } : {}),
       ...(raw.brand ?? {}),
     },
     colors: { ...(preset?.colors ?? {}), ...(raw.colors ?? {}) },

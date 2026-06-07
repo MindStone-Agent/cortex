@@ -39,15 +39,18 @@ export async function POST(req: Request) {
     };
   })();
 
-  // Applying a preset: select it and clear stored subtitle/palette overrides so the
-  // preset drives them. Name + logo (identity) are left untouched.
+  // Applying a preset: select it and clear stored logo/subtitle/palette overrides so
+  // the preset drives them. The name (identity) is left untouched.
   if (body.themeId !== undefined) {
     const preset = themePresetById(body.themeId);
     if (!preset) {
       return NextResponse.json({ ok: false, error: "Unknown theme." }, { status: 400 });
     }
     next.themeId = preset.id;
-    if (next.brand) delete next.brand.tagline;
+    if (next.brand) {
+      delete next.brand.tagline;
+      delete next.brand.logo;
+    }
     next.colors = {};
   }
 

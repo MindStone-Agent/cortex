@@ -153,7 +153,7 @@ export function SettingsPanel({
               </div>
             )}
             <p className="text-[11px] text-ink-500 mt-2 leading-snug">
-              Sets the subtitle and color palette. The name (Cortex) and logo stay the same.
+              Sets the logo, subtitle, and color palette. The name (Cortex) stays the same.
             </p>
           </section>
 
