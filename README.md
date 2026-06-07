@@ -50,13 +50,21 @@ health check and a direct link. Edit the catalog in `cortex-config.json`, or let
   **context window per model**.
 - **Services catalog** — a configurable grid of the tools you run, each with a live health
   check. **Auto-discovery** (`/api/discover`) probes localhost for common AI-tool ports.
+- **Settings panel** — a gear-icon drawer to toggle the NVIDIA logo and manage tool installs,
+  no file editing required.
+- **One-click tool installs (opt-in)** — install common AI tools (Open WebUI, Jupyter Lab)
+  straight from Settings → Tools; ComfyUI, Synapse, and Unsloth Studio show live status and
+  install notes. A successfully installed tool is auto-added to your services. Off by
+  default, gated behind `system.toolInstall`.
+- **Ollama version + updates (opt-in)** — see the installed Ollama version, get flagged when
+  a newer release is available, and optionally update + restart Ollama from the dashboard.
 - **Themable** — rebrand the name, logo, and color palette via `theme.json`, no rebuild
   required.
 - **Hardware-aware** — detects unified (GB10) / discrete-VRAM / CPU-only and adapts.
 
 ## Status
 
-Active development — **v0.3**.
+Active development — **v0.4**.
 
 | Milestone | State |
 | --- | --- |
@@ -67,6 +75,9 @@ Active development — **v0.3**.
 | Hardware-mode detection (unified / discrete / cpu-only) | ✅ |
 | Config-driven services + auto-discovery | ✅ |
 | Theme overrides (rebrandable) | ✅ |
+| Settings panel — logo toggle + tool manager | ✅ |
+| Ollama version check + opt-in update / restart | ✅ |
+| One-click tool installs (opt-in) | ✅ |
 | `install.sh` + OpenWebUI setup script | ✅ |
 | Public release — docs, demo | ◻ (v1.0) |
 
@@ -145,6 +156,21 @@ user-controlled ever reaches root. Without this opt-in, the dashboard simply sho
 "update available" badge and the command to run yourself. Only enable it on a trusted
 LAN deployment. To revoke: `rm /etc/sudoers.d/cortex-ollama-update` and set the flag back
 to `false`.
+
+### Tool installs from the dashboard (opt-in)
+
+**Settings → Tools** lists a small catalog of AI tools with live status
+(`running` / `available` / `unsupported` for your architecture). Docker-based tools
+(Open WebUI, Jupyter Lab) can be installed with one click; script-based tools (ComfyUI,
+Synapse, Unsloth Studio) show their status and a short install note. When a UI-serving tool
+installs successfully, Cortex adds it to your services page automatically.
+
+One-click installs are **off by default**. To enable them, set `"system": { "toolInstall":
+true }` in `cortex-config.json` and restart Cortex. No sudo is involved — the Cortex web
+user just needs to be in the **`docker`** group. Installs run catalog-defined `docker run`
+commands via `execFile` (no shell, and nothing user-controlled ever reaches the system —
+the UI only selects *which* catalog entry to install). As with the Ollama updater, only
+enable this on a trusted LAN deployment; left off, the Tools panel is read-only status.
 
 ## Scripts
 
