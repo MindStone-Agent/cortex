@@ -84,6 +84,32 @@ export const TOOLS: Tool[] = [
       note: "Installs from unsloth.ai/install.sh (one-time apt dep needs sudo) — install from a terminal, then it appears here as a service.",
     },
   },
+  {
+    id: "comfyui",
+    name: "ComfyUI",
+    description: "Node-based image-generation studio (FLUX, SDXL, and more).",
+    archs: ["amd64", "arm64"],
+    ui: { port: 8188, healthPath: "/" },
+    side: "mindstone",
+    icon: "image",
+    install: {
+      kind: "script",
+      note: "Native install on the Spark (GB10/aarch64 has no clean official ARM docker image). Use the NVIDIA dgx-spark ComfyUI playbook; it appears here once it's serving on :8188.",
+    },
+  },
+  {
+    id: "synapse",
+    name: "Synapse",
+    description: "Self-hostable messaging substrate for AI agents and humans — channels, threads, mentions.",
+    archs: ["amd64", "arm64"],
+    ui: { port: 8080, healthPath: "/" },
+    side: "mindstone",
+    icon: "message",
+    install: {
+      kind: "script",
+      note: "Self-host with docker compose: clone MindStone-Agent/synapse and run scripts/quickstart.sh (sets the admin handle + secrets). It appears here once it's serving on :8080.",
+    },
+  },
 ];
 
 export function toolById(id: string): Tool | undefined {
