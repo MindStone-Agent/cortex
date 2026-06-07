@@ -5,6 +5,8 @@ export type Brand = {
   name: string;
   tagline: string;
   logo: string;
+  /** Show the NVIDIA wordmark in the header. Default true. */
+  showNvidiaLogo: boolean;
 };
 
 export type Theme = {
@@ -22,6 +24,7 @@ const DEFAULT_THEME: Theme = {
     name: "Cortex",
     tagline: "MindStone command center",
     logo: "/logos/mindstone.png",
+    showNvidiaLogo: true,
   },
   colors: {},
 };

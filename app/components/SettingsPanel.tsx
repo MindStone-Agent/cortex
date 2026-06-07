@@ -1,0 +1,104 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import type { Brand } from "../lib/theme";
+
+export function SettingsPanel({
+  open,
+  onClose,
+  brand,
+}: {
+  open: boolean;
+  onClose: () => void;
+  brand: Brand;
+}) {
+  const router = useRouter();
+  const [showNvidia, setShowNvidia] = useState(brand.showNvidiaLogo);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const save = async (patch: Partial<Brand>) => {
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brand: patch }),
+      });
+      const json = (await res.json()) as { ok: boolean; error?: string };
+      if (!res.ok || !json.ok) {
+        setError(json.error ?? "Failed to save.");
+        return;
+      }
+      router.refresh(); // re-render server components (header) with the new theme
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!open) return null;
+
+  return (
+    <>
+      <div className="fixed inset-0 z-[60] bg-black/50" onClick={onClose} aria-hidden />
+      <div className="fixed right-0 top-0 z-[70] h-full w-full max-w-sm bg-ink-950 border-l border-ink-800 shadow-2xl overflow-y-auto">
+        <div className="flex items-center justify-between p-5 border-b border-ink-800">
+          <h2 className="text-lg font-medium text-ink-100">Settings</h2>
+          <button
+            onClick={onClose}
+            aria-label="Close settings"
+            className="text-ink-400 hover:text-ink-100 text-2xl leading-none px-1"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="p-5 space-y-8">
+          <section>
+            <h3 className="text-xs uppercase tracking-wider text-ink-400 mb-3">Branding</h3>
+            <label className="flex items-center justify-between gap-4 cursor-pointer py-1">
+              <span className="text-sm text-ink-200">Show NVIDIA logo</span>
+              <input
+                type="checkbox"
+                checked={showNvidia}
+                disabled={saving}
+                onChange={(e) => {
+                  setShowNvidia(e.target.checked);
+                  save({ showNvidiaLogo: e.target.checked });
+                }}
+                className="h-4 w-4 accent-gold-500 cursor-pointer"
+              />
+            </label>
+            <p className="text-[11px] text-ink-500 mt-1">
+              Rename / re-logo and tune colors in <span className="font-mono">theme.json</span> (full
+              theming UI coming).
+            </p>
+          </section>
+
+          <section>
+            <h3 className="text-xs uppercase tracking-wider text-ink-400 mb-3">Tools &amp; installs</h3>
+            <p className="text-sm text-ink-400 leading-snug">
+              One-click installs for local-AI tools and DGX Spark playbooks will live here —
+              install, update, and manage them without touching a terminal.
+            </p>
+            <a
+              href="https://github.com/MindStone-Agent/cortex/issues/13"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-block mt-2 text-xs text-gold-400 hover:underline"
+            >
+              Track progress → cortex#13
+            </a>
+          </section>
+
+          {error && <p className="text-[11px] text-error">{error}</p>}
+          {saving && <p className="text-[11px] text-ink-400">Saving…</p>}
+        </div>
+      </div>
+    </>
+  );
+}

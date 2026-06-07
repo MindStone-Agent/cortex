@@ -3,7 +3,8 @@
   "brand": {
     "name": "Cortex",
     "tagline": "MindStone command center",
-    "logo": "/logos/mindstone.png"
+    "logo": "/logos/mindstone.png",
+    "showNvidiaLogo": true
   },
   "colors": {
     "gold-500": "#F2B23E",
