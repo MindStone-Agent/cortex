@@ -22,7 +22,7 @@ export type Tool = {
   /** If it serves a UI: the port + health path. Used for status probing and to add
    *  a service card on successful install. */
   ui?: { port: number; healthPath: string };
-  side: "mindstone" | "nvidia";
+  side: "primary" | "nvidia";
   icon: string;
   install: ToolInstall;
 };
@@ -34,7 +34,7 @@ export const TOOLS: Tool[] = [
     description: "Web chat UI for your local Ollama models.",
     archs: ["amd64", "arm64"],
     ui: { port: 8080, healthPath: "/health" },
-    side: "mindstone",
+    side: "primary",
     icon: "chat",
     install: {
       kind: "docker",
@@ -90,7 +90,7 @@ export const TOOLS: Tool[] = [
     description: "Node-based image-generation studio (FLUX, SDXL, and more).",
     archs: ["amd64", "arm64"],
     ui: { port: 8188, healthPath: "/" },
-    side: "mindstone",
+    side: "primary",
     icon: "image",
     install: {
       kind: "script",
@@ -103,7 +103,7 @@ export const TOOLS: Tool[] = [
     description: "Self-hostable messaging substrate for AI agents and humans — channels, threads, mentions.",
     archs: ["amd64", "arm64"],
     ui: { port: 8080, healthPath: "/" },
-    side: "mindstone",
+    side: "primary",
     icon: "message",
     install: {
       kind: "script",

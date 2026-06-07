@@ -22,14 +22,16 @@ export function Header({ hostname, brand }: { hostname: string; brand: Brand }) 
     <header className="sticky top-0 z-50 w-full border-b border-ink-800 bg-ink-950/85 backdrop-blur-md">
       <div className="mx-auto max-w-7xl px-6 py-4 flex items-center justify-between gap-6">
         <div className="flex items-center gap-4 min-w-0">
-          <Image
-            src={brand.logo}
-            alt={brand.name}
-            width={36}
-            height={36}
-            priority
-            className="rounded shrink-0"
-          />
+          {brand.logo && (
+            <Image
+              src={brand.logo}
+              alt={brand.name}
+              width={36}
+              height={36}
+              priority
+              className="rounded shrink-0"
+            />
+          )}
           <div className="min-w-0">
             <h1 className="text-xl font-semibold tracking-tight text-ink-100 truncate">
               {brand.name}

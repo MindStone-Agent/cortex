@@ -1,0 +1,13 @@
+{
+  "$comment": "MindStone-branded theme. Copy to theme.json to apply (cp theme.mindstone.example.json theme.json). This is the original Cortex look; the shipped default (theme.example.json) is neutral.",
+  "brand": {
+    "name": "Cortex",
+    "tagline": "MindStone command center",
+    "logo": "/logos/mindstone.png",
+    "showNvidiaLogo": true
+  },
+  "colors": {
+    "gold-500": "#F2B23E",
+    "nvgreen-500": "#76B900"
+  }
+}

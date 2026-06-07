@@ -9,7 +9,7 @@ type Service = {
   description: string;
   url: string;
   port: number;
-  side: "mindstone" | "nvidia";
+  side: "primary" | "nvidia";
   icon: string;
 };
 
@@ -50,10 +50,13 @@ export function ServiceCard({ service }: { service: Service }) {
     return () => { cancelled = true; clearInterval(id); };
   }, [service.id]);
 
-  const accent = service.side === "mindstone" ? "gold" : "nvgreen";
-  const accentText = service.side === "mindstone" ? "text-gold-500" : "text-nvgreen-500";
-  const accentRing = service.side === "mindstone" ? "hover:ring-gold-500/40" : "hover:ring-nvgreen-500/40";
-  const accentGlow = service.side === "mindstone" ? "from-gold-500/0 via-gold-500/0 to-gold-500/10" : "from-nvgreen-500/0 via-nvgreen-500/0 to-nvgreen-500/10";
+  // "nvidia" → NVIDIA green; everything else (incl. legacy values) → primary accent.
+  const isNv = service.side === "nvidia";
+  const accentText = isNv ? "text-nvgreen-500" : "text-gold-500";
+  const accentRing = isNv ? "hover:ring-nvgreen-500/40" : "hover:ring-gold-500/40";
+  const accentGlow = isNv
+    ? "from-nvgreen-500/0 via-nvgreen-500/0 to-nvgreen-500/10"
+    : "from-gold-500/0 via-gold-500/0 to-gold-500/10";
 
   const statusColor =
     status === "up" ? "bg-success" : status === "down" ? "bg-error" : "bg-ink-600";

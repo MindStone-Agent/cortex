@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  /* MindStone gold palette — identity-side */
+  /* Primary accent palette (themeable — your brand color) */
   --color-gold-50: #FFF8E6;
   --color-gold-100: #FCE7A6;
   --color-gold-300: #F5CB5C;
@@ -15,7 +15,7 @@
   --color-nvgreen-500: #76B900;
   --color-nvgreen-700: #5A8C00;
 
-  /* Ink palette — neutrals (MindStone brand) */
+  /* Ink palette — neutrals */
   --color-ink-950: #07070A;
   --color-ink-900: #0F0E0B;
   --color-ink-800: #1F1E1A;

@@ -13,6 +13,14 @@ Tracked toward **v1.0** (see the [v1.0 milestone](https://github.com/MindStone-A
 standalone identity (neutral by default), a verified clean install on a stock
 DGX Spark, an honest security story, and a demo + landing pitch.
 
+### Changed
+- **Neutral by default** (toward v1.0, #14) — the shipped brand, theme, and example
+  config no longer assume MindStone. The default tagline is "Local AI command center"
+  with a generic Cortex glyph; the service-card accent value `side: "mindstone"` is now
+  `side: "primary"` (`"nvidia"` unchanged; legacy `"mindstone"` still renders as the
+  primary accent). The original look ships as an alternate theme,
+  `theme.mindstone.example.json`.
+
 ## [0.4.0] — 2026-06-07
 
 ### Added

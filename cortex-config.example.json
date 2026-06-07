@@ -8,7 +8,7 @@
       "url": "http://localhost:8080",
       "port": 8080,
       "healthPath": "/",
-      "side": "mindstone",
+      "side": "primary",
       "icon": "chat"
     },
     {
@@ -19,7 +19,7 @@
       "url": "http://localhost:8188",
       "port": 8188,
       "healthPath": "/",
-      "side": "mindstone",
+      "side": "primary",
       "icon": "image"
     },
     {
@@ -41,7 +41,7 @@
       "url": "http://localhost:8081",
       "port": 8081,
       "healthPath": "/v1/healthz",
-      "side": "mindstone",
+      "side": "primary",
       "icon": "message"
     }
   ],

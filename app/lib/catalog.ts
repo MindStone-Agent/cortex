@@ -7,7 +7,7 @@ export type CatalogEntry = {
   defaultPort: number;
   healthPath: string;
   icon: string;
-  side: "mindstone" | "nvidia";
+  side: "primary" | "nvidia";
 };
 
 /**
@@ -18,14 +18,14 @@ export type CatalogEntry = {
  */
 export const KNOWN_SERVICES: CatalogEntry[] = [
   { id: "ollama", name: "Ollama", description: "OpenAI-compatible local inference API.", defaultPort: 11434, healthPath: "/api/version", icon: "api", side: "nvidia" },
-  { id: "openwebui", name: "Open WebUI", description: "Web chat UI for local models.", defaultPort: 8080, healthPath: "/health", icon: "chat", side: "mindstone" },
-  { id: "comfyui", name: "ComfyUI", description: "Node-based image generation studio.", defaultPort: 8188, healthPath: "/system_stats", icon: "image", side: "mindstone" },
+  { id: "openwebui", name: "Open WebUI", description: "Web chat UI for local models.", defaultPort: 8080, healthPath: "/health", icon: "chat", side: "primary" },
+  { id: "comfyui", name: "ComfyUI", description: "Node-based image generation studio.", defaultPort: 8188, healthPath: "/system_stats", icon: "image", side: "primary" },
   { id: "vllm", name: "vLLM", description: "High-throughput inference server.", defaultPort: 8000, healthPath: "/health", icon: "api", side: "nvidia" },
-  { id: "tgwebui", name: "Text Generation WebUI", description: "Gradio UI for local LLMs (oobabooga).", defaultPort: 7860, healthPath: "/", icon: "chat", side: "mindstone" },
-  { id: "automatic1111", name: "Stable Diffusion WebUI", description: "AUTOMATIC1111 image generation UI.", defaultPort: 7861, healthPath: "/", icon: "image", side: "mindstone" },
-  { id: "lmstudio", name: "LM Studio", description: "Local model server (OpenAI-compatible).", defaultPort: 1234, healthPath: "/v1/models", icon: "api", side: "mindstone" },
-  { id: "llamacpp", name: "llama.cpp server", description: "llama.cpp HTTP server.", defaultPort: 8081, healthPath: "/health", icon: "api", side: "mindstone" },
-  { id: "jupyter", name: "Jupyter", description: "Notebooks for experimentation.", defaultPort: 8888, healthPath: "/api", icon: "api", side: "mindstone" },
+  { id: "tgwebui", name: "Text Generation WebUI", description: "Gradio UI for local LLMs (oobabooga).", defaultPort: 7860, healthPath: "/", icon: "chat", side: "primary" },
+  { id: "automatic1111", name: "Stable Diffusion WebUI", description: "AUTOMATIC1111 image generation UI.", defaultPort: 7861, healthPath: "/", icon: "image", side: "primary" },
+  { id: "lmstudio", name: "LM Studio", description: "Local model server (OpenAI-compatible).", defaultPort: 1234, healthPath: "/v1/models", icon: "api", side: "primary" },
+  { id: "llamacpp", name: "llama.cpp server", description: "llama.cpp HTTP server.", defaultPort: 8081, healthPath: "/health", icon: "api", side: "primary" },
+  { id: "jupyter", name: "Jupyter", description: "Notebooks for experimentation.", defaultPort: 8888, healthPath: "/api", icon: "api", side: "primary" },
 ];
 
 export function catalogById(id: string): CatalogEntry | undefined {

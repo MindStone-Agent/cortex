@@ -2,8 +2,8 @@
   "$comment": "Copy to theme.json to rebrand Cortex (gitignored). brand.logo is a path under public/. colors override Tailwind @theme tokens by name (no --color- prefix); omit any you don't want to change.",
   "brand": {
     "name": "Cortex",
-    "tagline": "MindStone command center",
-    "logo": "/logos/mindstone.png",
+    "tagline": "Local AI command center",
+    "logo": "/logos/cortex.svg",
     "showNvidiaLogo": true
   },
   "colors": {

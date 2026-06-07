@@ -1,6 +1,6 @@
 # Cortex
 
-**The MindStone Agent command center for NVIDIA GB10 platforms.**
+**A self-hostable command center for your local AI stack on NVIDIA GB10 platforms.**
 
 Cortex is a self-hostable web UI for a local AI stack. It gives you a single landing
 page and live dashboard: system and GPU health, the models currently loaded across your
@@ -128,11 +128,13 @@ gitignored so your setup never gets committed.
 
 - **`cortex-config.json`** (copy from `cortex-config.example.json`) — the services Cortex
   surfaces. Each entry has `id`, `name`, `tagline`, `description`, `url`, `port`,
-  `healthPath`, an `icon`, and a `side` (`"mindstone"` / `"nvidia"`) that picks its accent.
+  `healthPath`, an `icon`, and a `side` (`"primary"` / `"nvidia"`) that picks its accent.
   Not sure what you're running? `GET /api/discover` probes localhost for common AI-tool
   ports and returns what it finds.
 - **`theme.json`** (copy from `theme.example.json`) — rebrand: `brand` (name / tagline /
   logo) and `colors` (override any Tailwind `@theme` token by name, e.g. `gold-500`).
+  Cortex ships **neutral** by default; an alternate **MindStone** theme is included at
+  `theme.mindstone.example.json` (`cp theme.mindstone.example.json theme.json` to apply it).
 
 Models are read from a local Ollama instance (`localhost:11434`).
 

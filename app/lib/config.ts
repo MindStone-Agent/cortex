@@ -9,7 +9,8 @@ export type Service = {
   url: string;
   port: number;
   healthPath: string;
-  side: "mindstone" | "nvidia";
+  /** Accent for the service card: "nvidia" (green) or "primary" (your brand color). */
+  side: "primary" | "nvidia";
   icon: string;
 };
 

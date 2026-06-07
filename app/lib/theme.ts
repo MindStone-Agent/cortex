@@ -22,8 +22,8 @@ export type Theme = {
 const DEFAULT_THEME: Theme = {
   brand: {
     name: "Cortex",
-    tagline: "MindStone command center",
-    logo: "/logos/mindstone.png",
+    tagline: "Local AI command center",
+    logo: "/logos/cortex.svg",
     showNvidiaLogo: true,
   },
   colors: {},
