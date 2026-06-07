@@ -13,13 +13,19 @@ Tracked toward **v1.0** (see the [v1.0 milestone](https://github.com/MindStone-A
 standalone identity (neutral by default), a verified clean install on a stock
 DGX Spark, an honest security story, and a demo + landing pitch.
 
+### Added
+- **Theme selector** (Settings → Theme) — pick a built-in theme preset from the UI;
+  applying one swaps the header **subtitle** and **color palette** and persists to
+  `theme.json`. Ships with **DGX Spark** (default) and **MindStone** presets; add more
+  in `app/lib/themes.ts`.
+
 ### Changed
-- **Neutral by default** (toward v1.0, #14) — the shipped brand, theme, and example
-  config no longer assume MindStone. The default tagline is "Local AI command center"
-  with a generic Cortex glyph; the service-card accent value `side: "mindstone"` is now
-  `side: "primary"` (`"nvidia"` unchanged; legacy `"mindstone"` still renders as the
-  primary accent). The original look ships as an alternate theme,
-  `theme.mindstone.example.json`.
+- **Neutral by default** (toward v1.0, #14) — the shipped default no longer assumes
+  MindStone branding. The default subtitle is now "DGX Spark command center". The product
+  **name (Cortex)** and **logo** are fixed identity and do not change with the theme; a
+  theme varies only the subtitle + palette. The service-card accent value
+  `side: "mindstone"` is now `side: "primary"` (`"nvidia"` unchanged; legacy `"mindstone"`
+  still renders as the primary accent).
 
 ## [0.4.0] — 2026-06-07
 

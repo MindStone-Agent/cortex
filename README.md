@@ -131,10 +131,12 @@ gitignored so your setup never gets committed.
   `healthPath`, an `icon`, and a `side` (`"primary"` / `"nvidia"`) that picks its accent.
   Not sure what you're running? `GET /api/discover` probes localhost for common AI-tool
   ports and returns what it finds.
-- **`theme.json`** (copy from `theme.example.json`) — rebrand: `brand` (name / tagline /
-  logo) and `colors` (override any Tailwind `@theme` token by name, e.g. `gold-500`).
-  Cortex ships **neutral** by default; an alternate **MindStone** theme is included at
-  `theme.mindstone.example.json` (`cp theme.mindstone.example.json theme.json` to apply it).
+- **`theme.json`** (copy from `theme.example.json`) — appearance. Pick a **theme** from
+  **Settings → Theme** in the UI (e.g. *DGX Spark* or *MindStone*) — a theme sets the
+  header subtitle and color palette. The product **name (Cortex)** and **logo** are the
+  fixed identity and don't change with the theme. For finer control, edit `brand`
+  (name / logo / tagline) and `colors` (override any Tailwind `@theme` token by name,
+  e.g. `gold-500`) directly; add your own theme presets in `app/lib/themes.ts`.
 
 Models are read from a local Ollama instance (`localhost:11434`).
 

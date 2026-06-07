@@ -1,9 +1,10 @@
 {
-  "$comment": "Copy to theme.json to rebrand Cortex (gitignored). brand.logo is a path under public/. colors override Tailwind @theme tokens by name (no --color- prefix); omit any you don't want to change.",
+  "$comment": "Copy to theme.json to rebrand Cortex (gitignored). Pick a theme in the UI (Settings -> Theme) or edit here. themeId selects a built-in preset (see app/lib/themes.ts). brand.name + brand.logo are the fixed identity; tagline + colors are themeable. brand.logo is a path under public/. colors override Tailwind @theme tokens by name (no --color- prefix).",
+  "themeId": "dgx-spark",
   "brand": {
     "name": "Cortex",
-    "tagline": "Local AI command center",
-    "logo": "/logos/cortex.svg",
+    "tagline": "DGX Spark command center",
+    "logo": "/logos/mindstone.png",
     "showNvidiaLogo": true
   },
   "colors": {

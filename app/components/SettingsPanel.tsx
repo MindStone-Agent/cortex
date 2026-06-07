@@ -4,6 +4,8 @@ import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
 import { ToolsManager } from "./ToolsManager";
 
+type Preset = { id: string; label: string; tagline: string };
+
 export function SettingsPanel({
   open,
   onClose,
@@ -19,7 +21,32 @@ export function SettingsPanel({
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
 
+  const [presets, setPresets] = useState<Preset[]>([]);
+  const [activeThemeId, setActiveThemeId] = useState<string | null>(null);
+  const [themeBusy, setThemeBusy] = useState(false);
+
   useEffect(() => setMounted(true), []);
+
+  // Load theme presets + the active one whenever the panel opens.
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/settings", { cache: "no-store" });
+        if (!res.ok) return;
+        const json = (await res.json()) as { presets?: Preset[]; themeId?: string };
+        if (cancelled) return;
+        setPresets(json.presets ?? []);
+        setActiveThemeId(json.themeId ?? null);
+      } catch {
+        // non-fatal
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
   const toggleNvidiaLogo = async (value: boolean) => {
     onShowNvidiaLogoChange(value); // instant visual
@@ -44,6 +71,30 @@ export function SettingsPanel({
     }
   };
 
+  const applyTheme = async (id: string) => {
+    if (id === activeThemeId || themeBusy) return;
+    setThemeBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ themeId: id }),
+      });
+      const json = (await res.json()) as { ok: boolean; error?: string };
+      if (!res.ok || !json.ok) {
+        setError(json.error ?? "Failed to apply theme.");
+        setThemeBusy(false);
+        return;
+      }
+      // Subtitle + palette are server-rendered; reload to apply them everywhere.
+      window.location.reload();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setThemeBusy(false);
+    }
+  };
+
   // Portal to body so the fixed overlay/panel anchor to the viewport, not the
   // backdrop-filtered <header> (which would otherwise be their containing block).
   if (!open || !mounted) return null;
@@ -65,6 +116,48 @@ export function SettingsPanel({
 
         <div className="p-5 space-y-8">
           <section>
+            <h3 className="text-xs uppercase tracking-wider text-ink-400 mb-3">Theme</h3>
+            {presets.length === 0 ? (
+              <p className="text-sm text-ink-400">Loading…</p>
+            ) : (
+              <div className="space-y-2">
+                {presets.map((p) => {
+                  const active = p.id === activeThemeId;
+                  return (
+                    <label
+                      key={p.id}
+                      className={
+                        "flex items-start gap-3 cursor-pointer rounded-lg border p-3 transition " +
+                        (active
+                          ? "border-gold-500/50 bg-gold-500/5"
+                          : "border-ink-800 hover:bg-ink-900/60")
+                      }
+                    >
+                      <input
+                        type="radio"
+                        name="cortex-theme"
+                        checked={active}
+                        disabled={themeBusy}
+                        onChange={() => applyTheme(p.id)}
+                        className="mt-0.5 h-4 w-4 accent-gold-500 cursor-pointer"
+                      />
+                      <span className="min-w-0">
+                        <span className="block text-sm text-ink-200">{p.label}</span>
+                        <span className="block text-[11px] text-ink-500 truncate">
+                          “{p.tagline}”
+                        </span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+            <p className="text-[11px] text-ink-500 mt-2 leading-snug">
+              Sets the subtitle and color palette. The name (Cortex) and logo stay the same.
+            </p>
+          </section>
+
+          <section>
             <h3 className="text-xs uppercase tracking-wider text-ink-400 mb-3">Branding</h3>
             <label className="flex items-center justify-between gap-4 cursor-pointer py-1">
               <span className="text-sm text-ink-200">Show NVIDIA logo</span>
@@ -77,8 +170,8 @@ export function SettingsPanel({
               />
             </label>
             <p className="text-[11px] text-ink-500 mt-1">
-              Rename / re-logo and tune colors in <span className="font-mono">theme.json</span> (full
-              theming UI coming).
+              Fine-tune the name, logo, and individual colors in{" "}
+              <span className="font-mono">theme.json</span>.
             </p>
           </section>
 
@@ -88,7 +181,7 @@ export function SettingsPanel({
           </section>
 
           {error && <p className="text-[11px] text-error">{error}</p>}
-          {saving && <p className="text-[11px] text-ink-400">Saving…</p>}
+          {(saving || themeBusy) && <p className="text-[11px] text-ink-400">Saving…</p>}
         </div>
       </div>
     </>,

@@ -17,16 +17,19 @@ export type Theme = {
    * cascades over the compiled defaults. Omit to keep the default palette.
    */
   colors: Record<string, string>;
+  /** Active theme-preset id (see lib/themes.ts). Drives the in-UI selector. */
+  themeId?: string;
 };
 
 const DEFAULT_THEME: Theme = {
   brand: {
     name: "Cortex",
-    tagline: "Local AI command center",
-    logo: "/logos/cortex.svg",
+    tagline: "DGX Spark command center",
+    logo: "/logos/mindstone.png",
     showNvidiaLogo: true,
   },
   colors: {},
+  themeId: "dgx-spark",
 };
 
 /**
@@ -45,6 +48,7 @@ export function loadTheme(): Theme {
         return {
           brand: { ...DEFAULT_THEME.brand, ...(t.brand ?? {}) },
           colors: t.colors ?? {},
+          themeId: t.themeId ?? DEFAULT_THEME.themeId,
         };
       }
     } catch {
