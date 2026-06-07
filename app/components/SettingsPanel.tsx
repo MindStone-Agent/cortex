@@ -1,7 +1,8 @@
 "use client";
 
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Brand } from "../lib/theme";
 
 export function SettingsPanel({
@@ -17,6 +18,9 @@ export function SettingsPanel({
   const [showNvidia, setShowNvidia] = useState(brand.showNvidiaLogo);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   const save = async (patch: Partial<Brand>) => {
     setSaving(true);
@@ -40,12 +44,14 @@ export function SettingsPanel({
     }
   };
 
-  if (!open) return null;
+  // Portal to body so the fixed overlay/panel anchor to the viewport, not the
+  // backdrop-filtered <header> (which would otherwise be their containing block).
+  if (!open || !mounted) return null;
 
-  return (
+  return createPortal(
     <>
-      <div className="fixed inset-0 z-[60] bg-black/50" onClick={onClose} aria-hidden />
-      <div className="fixed right-0 top-0 z-[70] h-full w-full max-w-sm bg-ink-950 border-l border-ink-800 shadow-2xl overflow-y-auto">
+      <div className="fixed inset-0 z-[100] bg-black/50" onClick={onClose} aria-hidden />
+      <div className="fixed right-0 top-0 z-[101] h-full w-full max-w-sm bg-ink-950 border-l border-ink-800 shadow-2xl overflow-y-auto">
         <div className="flex items-center justify-between p-5 border-b border-ink-800">
           <h2 className="text-lg font-medium text-ink-100">Settings</h2>
           <button
@@ -98,7 +104,8 @@ export function SettingsPanel({
           {error && <p className="text-[11px] text-error">{error}</p>}
           {saving && <p className="text-[11px] text-ink-400">Saving…</p>}
         </div>
-      </div>
-    </>
+    </div>
+    </>,
+    document.body
   );
 }
