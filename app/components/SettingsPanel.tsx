@@ -2,6 +2,7 @@
 
 import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
+import { ToolsManager } from "./ToolsManager";
 
 export function SettingsPanel({
   open,
@@ -83,18 +84,7 @@ export function SettingsPanel({
 
           <section>
             <h3 className="text-xs uppercase tracking-wider text-ink-400 mb-3">Tools &amp; installs</h3>
-            <p className="text-sm text-ink-400 leading-snug">
-              One-click installs for local-AI tools and DGX Spark playbooks will live here —
-              install, update, and manage them without touching a terminal.
-            </p>
-            <a
-              href="https://github.com/MindStone-Agent/cortex/issues/13"
-              target="_blank"
-              rel="noreferrer"
-              className="inline-block mt-2 text-xs text-gold-400 hover:underline"
-            >
-              Track progress → cortex#13
-            </a>
+            <ToolsManager />
           </section>
 
           {error && <p className="text-[11px] text-error">{error}</p>}

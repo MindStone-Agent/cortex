@@ -21,6 +21,13 @@ export type SystemConfig = {
    * a tight sudoers rule). Only turn this on for a trusted LAN deployment.
    */
   ollamaUpdate?: boolean;
+  /**
+   * Allow the Cortex UI to install tools from the catalog (catalog-defined
+   * `docker run` commands — no user input reaches the shell). OFF by default.
+   * Docker installs need no sudo (the web user must be in the `docker` group);
+   * enabling is just a deliberate opt-in. Only turn this on for a trusted LAN box.
+   */
+  toolInstall?: boolean;
 };
 
 export type CortexConfig = {
@@ -65,5 +72,22 @@ export function getSystemConfig(): Required<SystemConfig> {
   const sys = loadConfig().system ?? {};
   return {
     ollamaUpdate: sys.ollamaUpdate === true,
+    toolInstall: sys.toolInstall === true,
   };
+}
+
+/**
+ * Append a service to cortex-config.json (the runtime config). Used after a
+ * tool install so it shows up on the services page. No-op if the id exists.
+ */
+export function addServiceToConfig(service: Service): void {
+  const cfg = loadConfig();
+  if (!cfg.services.some((s) => s.id === service.id)) {
+    cfg.services.push(service);
+  }
+  fs.writeFileSync(
+    path.join(process.cwd(), "cortex-config.json"),
+    JSON.stringify(cfg, null, 2) + "\n",
+    "utf8"
+  );
 }

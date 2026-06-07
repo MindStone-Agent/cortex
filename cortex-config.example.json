@@ -46,6 +46,7 @@
     }
   ],
   "system": {
-    "ollamaUpdate": false
+    "ollamaUpdate": false,
+    "toolInstall": false
   }
 }
