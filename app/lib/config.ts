@@ -13,8 +13,19 @@ export type Service = {
   icon: string;
 };
 
+export type SystemConfig = {
+  /**
+   * Allow the Cortex UI to update + restart Ollama via a scoped, passwordless-sudo
+   * wrapper. OFF by default — enabling it is a deliberate opt-in (see
+   * scripts/enable-ollama-update.sh, which installs a root-owned pinned wrapper and
+   * a tight sudoers rule). Only turn this on for a trusted LAN deployment.
+   */
+  ollamaUpdate?: boolean;
+};
+
 export type CortexConfig = {
   services: Service[];
+  system?: SystemConfig;
 };
 
 /**
@@ -47,4 +58,12 @@ export function loadConfig(): CortexConfig {
 
 export function getServices(): Service[] {
   return loadConfig().services ?? [];
+}
+
+/** System-action config (privileged UI actions). All flags default OFF. */
+export function getSystemConfig(): Required<SystemConfig> {
+  const sys = loadConfig().system ?? {};
+  return {
+    ollamaUpdate: sys.ollamaUpdate === true,
+  };
 }

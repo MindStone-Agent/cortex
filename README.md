@@ -125,9 +125,32 @@ gitignored so your setup never gets committed.
 
 Models are read from a local Ollama instance (`localhost:11434`).
 
+### Ollama updates from the dashboard (opt-in)
+
+The dashboard shows the installed Ollama version and flags when a newer release is
+available (compared against the Ollama GitHub releases). It can also **update + restart
+Ollama for you** — but because that's a privileged action and Cortex serves
+unauthenticated on the LAN, it's **off by default** and gated behind a deliberate,
+scoped opt-in:
+
+```bash
+sudo ./scripts/enable-ollama-update.sh        # installs a root-owned pinned wrapper + a tight sudoers rule
+# then set  "system": { "ollamaUpdate": true }  in cortex-config.json and restart Cortex
+```
+
+`enable-ollama-update.sh` grants the Cortex web user passwordless sudo for **only one
+fixed, argument-less script** ([`scripts/cortex-ollama-update.sh`](scripts/cortex-ollama-update.sh),
+installed root-owned and not writable by the web user) — nothing else, and nothing
+user-controlled ever reaches root. Without this opt-in, the dashboard simply shows the
+"update available" badge and the command to run yourself. Only enable it on a trusted
+LAN deployment. To revoke: `rm /etc/sudoers.d/cortex-ollama-update` and set the flag back
+to `false`.
+
 ## Scripts
 
 - **[`scripts/install.sh`](scripts/install.sh)** — single-command setup (above); idempotent.
+- **[`scripts/enable-ollama-update.sh`](scripts/enable-ollama-update.sh)** — opt in to
+  UI-driven Ollama updates (scoped passwordless-sudo wrapper); see above.
 - **[`scripts/setup-openwebui.sh`](scripts/setup-openwebui.sh)** — points Open WebUI at host
   Ollama (off the bundled-Ollama `:ollama` image onto `:main`, preserving the data volume)
   and sets `ENABLE_RAG_LOCAL_WEB_FETCH=true` so private-LAN ComfyUI image URLs aren't

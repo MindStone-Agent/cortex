@@ -11,6 +11,14 @@ type Data = {
   timestamp: string;
 };
 
+type OllamaUpdate = {
+  installed: string | null;
+  latest: string | null;
+  releaseUrl: string | null;
+  updateAvailable: boolean;
+  systemActionsEnabled: boolean;
+};
+
 const GiB = 1024 ** 3;
 const fmtGiB = (b: number) => (b / GiB).toFixed(1);
 
@@ -40,9 +48,113 @@ function Shell({ children, uptime }: { children: React.ReactNode; uptime?: strin
   );
 }
 
+function OllamaRow({ data, refresh }: { data: OllamaUpdate; refresh: () => void }) {
+  const [phase, setPhase] = useState<"idle" | "confirm" | "running" | "error">("idle");
+  const [message, setMessage] = useState<string | null>(null);
+
+  const runUpdate = async () => {
+    setPhase("running");
+    setMessage(null);
+    try {
+      const res = await fetch("/api/ollama/update", { method: "POST" });
+      const json = (await res.json()) as { ok: boolean; output?: string; error?: string };
+      if (!res.ok || !json.ok) {
+        setPhase("error");
+        setMessage(json.error ?? "Update failed.");
+        return;
+      }
+      setPhase("idle");
+      setMessage("Updated and restarted.");
+      refresh();
+    } catch (e) {
+      setPhase("error");
+      setMessage(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  return (
+    <div>
+      <div className="flex items-baseline justify-between gap-3">
+        <dt className="text-ink-400 text-xs uppercase tracking-wider">Ollama</dt>
+        <dd className="text-ink-100 font-mono text-xs flex items-center gap-2">
+          <span>{data.installed ? "v" + data.installed : "—"}</span>
+          {data.updateAvailable && data.latest && (
+            <a
+              href={data.releaseUrl ?? "#"}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-full bg-gold-500/15 text-gold-400 px-2 py-0.5 text-[10px] uppercase tracking-wider hover:bg-gold-500/25"
+              title="View release notes"
+            >
+              update → v{data.latest}
+            </a>
+          )}
+          {!data.updateAvailable && data.installed && data.latest && (
+            <span className="text-nvgreen-500/80 text-[10px] uppercase tracking-wider">up to date</span>
+          )}
+        </dd>
+      </div>
+
+      {data.updateAvailable && (
+        <div className="mt-1.5">
+          {!data.systemActionsEnabled ? (
+            <p className="text-ink-400 text-[11px] leading-snug">
+              Update available. To install from here, enable system actions
+              (<span className="font-mono">scripts/enable-ollama-update.sh</span>); otherwise run{" "}
+              <span className="font-mono text-ink-300">curl -fsSL https://ollama.com/install.sh | sh</span>{" "}
+              on the host.
+            </p>
+          ) : phase === "running" ? (
+            <p className="text-gold-400 text-[11px]">Updating &amp; restarting Ollama… (can take a minute)</p>
+          ) : phase === "confirm" ? (
+            <div className="flex items-center gap-2">
+              <span className="text-ink-300 text-[11px]">Update Ollama and restart the service?</span>
+              <button
+                onClick={runUpdate}
+                className="rounded-md bg-gold-500/20 text-gold-300 px-2.5 py-1 text-[11px] hover:bg-gold-500/30"
+              >
+                Confirm
+              </button>
+              <button
+                onClick={() => setPhase("idle")}
+                className="rounded-md border border-ink-700 text-ink-400 px-2.5 py-1 text-[11px] hover:text-ink-200"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setPhase("confirm")}
+              className="rounded-md bg-gold-500/15 text-gold-300 px-2.5 py-1 text-[11px] hover:bg-gold-500/25"
+            >
+              Update &amp; restart
+            </button>
+          )}
+        </div>
+      )}
+
+      {message && (
+        <p className={"mt-1 text-[11px] " + (phase === "error" ? "text-error" : "text-nvgreen-500/80")}>
+          {message}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function SystemStats() {
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [ollama, setOllama] = useState<OllamaUpdate | null>(null);
+
+  const fetchOllama = async () => {
+    try {
+      const res = await fetch("/api/ollama/update");
+      if (res.ok) setOllama((await res.json()) as OllamaUpdate);
+    } catch {
+      // non-fatal — the Ollama row just won't render
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -60,10 +172,13 @@ export function SystemStats() {
       }
     };
     fetchData();
+    fetchOllama();
     const interval = setInterval(fetchData, 5 * 60_000);
+    const ollamaInterval = setInterval(fetchOllama, 30 * 60_000);
     return () => {
       cancelled = true;
       clearInterval(interval);
+      clearInterval(ollamaInterval);
     };
   }, []);
 
@@ -110,6 +225,7 @@ export function SystemStats() {
             </div>
           )}
         </div>
+        {ollama && ollama.installed && <OllamaRow data={ollama} refresh={fetchOllama} />}
         {data.disk && (
           <div>
             <div className="flex items-baseline justify-between">

@@ -44,5 +44,8 @@
       "side": "mindstone",
       "icon": "message"
     }
-  ]
+  ],
+  "system": {
+    "ollamaUpdate": false
+  }
 }
