@@ -180,6 +180,11 @@ export function SettingsPanel({
             <ToolsManager />
           </section>
 
+          <p className="text-[11px] text-ink-500 leading-snug border-t border-ink-800 pt-4">
+            Cortex serves on your network without authentication. See{" "}
+            <span className="font-mono">SECURITY.md</span> before exposing it beyond a trusted LAN.
+          </p>
+
           {error && <p className="text-[11px] text-error">{error}</p>}
           {(saving || themeBusy) && <p className="text-[11px] text-ink-400">Saving…</p>}
         </div>

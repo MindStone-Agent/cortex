@@ -176,6 +176,20 @@ commands via `execFile` (no shell, and nothing user-controlled ever reaches the 
 the UI only selects *which* catalog entry to install). As with the Ollama updater, only
 enable this on a trusted LAN deployment; left off, the Tools panel is read-only status.
 
+## Security
+
+Cortex is built for a **single trusted machine on a private LAN**. By design it has
+**no authentication**, serves plain HTTP, and (when you opt in) can run a small set of
+bounded system actions — so anyone who can reach it on the network can use it.
+
+That's fine on a trusted home/lab network. **Do not expose it to the public internet or
+an untrusted network as-is** — put authentication in front of it first (e.g. Caddy
+`basic_auth`), keep the opt-in privileged actions off unless you have, and reach it
+remotely via Tailscale/WireGuard or an SSH tunnel rather than port-forwarding.
+
+See **[SECURITY.md](SECURITY.md)** for the full threat model, exactly what's exposed, and
+hardening steps.
+
 ## Scripts
 
 - **[`scripts/install.sh`](scripts/install.sh)** — single-command setup (above); idempotent.

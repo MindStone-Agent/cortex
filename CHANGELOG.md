@@ -14,6 +14,12 @@ standalone identity (neutral by default), a verified clean install on a stock
 DGX Spark, an honest security story, and a demo + landing pitch.
 
 ### Added
+- **Security documentation + posture** (toward v1.0, #16) — a `SECURITY.md` threat
+  model (no auth / LAN-only by default, exactly what's exposed, the opt-in privileged
+  actions and how to revoke them, and hardening: proxy `basic_auth`, binding to localhost,
+  Tailscale/SSH for remote). A README **Security** section, plus in-product notes: an
+  amber warning when one-click installs are enabled and a standing "no authentication"
+  line in the Settings panel.
 - **Theme selector** (Settings → Theme) — pick a built-in theme preset from the UI;
   applying one swaps the **logo**, header **subtitle**, and **color palette** and
   persists to `theme.json`. Ships with **DGX Spark** (default — Cortex glyph, NVIDIA-green

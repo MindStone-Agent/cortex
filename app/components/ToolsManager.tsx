@@ -92,6 +92,12 @@ export function ToolsManager() {
           <span className="font-mono">docker</span> group).
         </p>
       )}
+      {data.systemActionsEnabled && (
+        <p className="text-[11px] text-warning leading-snug">
+          ⚠ One-click installs are enabled. Cortex has no authentication, so anyone on this
+          network can trigger them — only keep this on for a trusted LAN.
+        </p>
+      )}
       {data.tools.map((t) => {
         const canInstall =
           data.systemActionsEnabled &&
