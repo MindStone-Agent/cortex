@@ -10,6 +10,7 @@ import { SettingsPanel } from "./SettingsPanel";
 const navItems = [
   { href: "/", label: "Dashboard" },
   { href: "/services", label: "Services" },
+  { href: "/models", label: "Models" },
 ];
 
 export function Header({ hostname, brand }: { hostname: string; brand: Brand }) {
