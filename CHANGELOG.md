@@ -10,10 +10,17 @@ clean install point and its notes live here.
 ## [Unreleased]
 
 Tracked toward **v1.0** (see the [v1.0 milestone](https://github.com/MindStone-Agent/cortex/milestone/1)):
-standalone identity (neutral by default), a verified clean install on a stock
-DGX Spark, an honest security story, and a demo + landing pitch.
+a verified clean install on a stock DGX Spark and a demo + landing pitch.
+
+## [0.5.0] — 2026-06-19
 
 ### Added
+- **Model discovery + pull** (#23/#24) — a new **Models** page to find and install models you
+  don't have yet. Search the **Ollama library** and **Hugging Face** (with a manual **Refresh**
+  to pick up newly-announced Ollama models immediately, instead of waiting for the daily cache),
+  then **pull** a chosen model or parameter size straight to your local Ollama with **live
+  download progress**. Discovery only — your installed inventory stays on the dashboard, and
+  pulls use Ollama's own API (no extra config or privileged access).
 - **Tailscale control** (Settings → Remote access, toward v1.0, #21) — install and control
   Tailscale from the UI (status, connect/disconnect, tailnet IP, one-time login URL) as the
   recommended remote-access path. Off by default behind `system.tailscale`; enable with
@@ -77,6 +84,7 @@ DGX Spark, an honest security story, and a demo + landing pitch.
 - Open WebUI reconfigure script (`:ollama` → `:main` image, preserves the data
   volume, fixes the SSRF guard for private-LAN image URLs).
 
-[Unreleased]: https://github.com/MindStone-Agent/cortex/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/MindStone-Agent/cortex/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/MindStone-Agent/cortex/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/MindStone-Agent/cortex/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/MindStone-Agent/cortex/releases/tag/v0.3.0

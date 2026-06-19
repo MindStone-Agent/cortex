@@ -46,8 +46,13 @@ health check and a direct link. Edit the catalog in `cortex-config.json`, or let
   hardware (GB10), GPU **power draw** is the primary activity signal — `nvidia-smi`
   utilization is unreliable there (it sticks high while a process is merely resident), so
   util is de-emphasized; on discrete GPUs, utilization is primary. Memory shows % and GB.
-- **Models view** — loaded and available models from Ollama, categorized, with the
-  **context window per model**.
+- **Models on the dashboard** — the models currently loaded and locally available in Ollama,
+  categorized, with the **context window per model**.
+- **Model discovery + pull** — a dedicated **Models** page to find models you *don't* have yet:
+  search the **Ollama library** and **Hugging Face**, with a manual **Refresh** to pick up
+  newly-announced Ollama models immediately, then **pull** a chosen model or size straight to
+  your local Ollama with **live download progress**. Discovery only — your installed inventory
+  stays on the dashboard.
 - **Services catalog** — a configurable grid of the tools you run, each with a live health
   check. **Auto-discovery** (`/api/discover`) probes localhost for common AI-tool ports.
 - **Settings panel** — a gear-icon drawer to toggle the NVIDIA logo and manage tool installs,
@@ -64,7 +69,7 @@ health check and a direct link. Edit the catalog in `cortex-config.json`, or let
 
 ## Status
 
-Active development — **v0.4**.
+Active development — **v0.5**.
 
 | Milestone | State |
 | --- | --- |
@@ -72,6 +77,7 @@ Active development — **v0.4**.
 | Dashboard — system stats + host versions + loaded models | ✅ |
 | Live performance telemetry over SSE | ✅ |
 | Models view (Ollama) + context window | ✅ |
+| Model discovery + pull — Ollama library + Hugging Face | ✅ |
 | Hardware-mode detection (unified / discrete / cpu-only) | ✅ |
 | Config-driven services + auto-discovery | ✅ |
 | Theme overrides (rebrandable) | ✅ |
@@ -138,7 +144,12 @@ gitignored so your setup never gets committed.
   and `colors` (override any Tailwind `@theme` token by name, e.g. `gold-500`) directly;
   add your own theme presets in `app/lib/themes.ts`.
 
-Models are read from a local Ollama instance (`localhost:11434`).
+Models are read from a local Ollama instance (`localhost:11434`) — both the dashboard
+inventory and the pulls you start from the **Models** page. To help you discover models you
+haven't installed, the Models page also queries the public **Ollama library** and **Hugging
+Face** APIs; the Ollama library listing is cached (~24 h) with a manual **Refresh** in the UI,
+and pulls stream their download progress straight from Ollama. No extra configuration or
+privileged access is needed — pulling uses Ollama's own API.
 
 ### Ollama updates from the dashboard (opt-in)
 
