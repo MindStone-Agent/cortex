@@ -24,25 +24,56 @@ No privileged or system-changing actions are possible in the default configurati
 
 ### Opt-in privileged actions (OFF by default)
 
-Two features perform system actions and stay disabled unless you explicitly enable them
+Several features perform system actions and stay disabled unless you explicitly enable them
 in `cortex-config.json`:
 
 - **`system.ollamaUpdate`** — a button that updates + restarts Ollama. Requires a
   separate scoped setup (`scripts/enable-ollama-update.sh`) that grants the Cortex user
   passwordless sudo for **one fixed, argument-less wrapper script only**
   (`scripts/cortex-ollama-update.sh`, installed root-owned).
+- **`system.ollamaConfig`** — Settings → Ollama writes Ollama's server defaults (cloud API
+  key, context length, keep-alive) and restarts Ollama to apply them. Requires
+  `scripts/enable-ollama-config.sh`, which adds an EnvironmentFile drop-in and grants
+  passwordless sudo for **one fixed, argument-less restart wrapper only**
+  (`scripts/cortex-ollama-restart.sh`, root-owned). Cortex writes the env file **as its own
+  user**, so nothing user-controlled reaches root — root only restarts the service.
+- **`system.cortexUpdate`** — pull + rebuild + restart Cortex from the dashboard. Runs **as the
+  Cortex web user** (no sudo on the standard systemd-user deploy: the user owns the checkout and
+  restarts its own unit). It does run `git pull` + `pnpm build` from the configured `origin`, so
+  treat write access to that remote as trusted.
 - **`system.toolInstall`** — one-click installs from Settings → Tools. Runs `docker run`
   for a **hardcoded catalog** of images via `execFile` (no shell, no user input reaches
   the system — the UI only picks which catalog id to install). Requires the Cortex user
   in the `docker` group; no sudo.
+- **`system.tailscale`** — install / connect / disconnect Tailscale. Requires
+  `scripts/enable-tailscale-control.sh`, which grants passwordless sudo for **three fixed
+  verbs** (`status` / `up` / `down`) of one root-owned wrapper.
 
-Both are deliberately bounded (a fixed wrapper / a fixed catalog — never arbitrary
-commands), but once enabled they are reachable **without authentication** by anyone on
-the network. **Only enable them on a trusted LAN.**
+Each is deliberately bounded (a fixed wrapper / a fixed catalog / fixed verbs — never arbitrary
+commands), but once enabled they are reachable **without authentication** by anyone on the
+network. **Only enable them on a trusted LAN.**
 
 To revoke:
 - `system.ollamaUpdate` → set `false`, then `rm /etc/sudoers.d/cortex-ollama-update`.
+- `system.ollamaConfig` → set `false`, then `rm /etc/sudoers.d/cortex-ollama-config
+  /etc/systemd/system/ollama.service.d/cortex-env.conf` and `systemctl daemon-reload`.
+- `system.cortexUpdate` → set `false`.
 - `system.toolInstall` → set `false`.
+- `system.tailscale` → set `false`, then `rm /etc/sudoers.d/cortex-tailscale`.
+
+### Stored credentials
+
+Two optional integrations store a secret server-side, in files Cortex writes **owner-readable**
+and **never** serializes to the browser:
+
+- **Hugging Face token** (`cortex-config.json`) — a read token for gated/private model search.
+- **Ollama Cloud API key** (`/etc/cortex/ollama.env`, only with `system.ollamaConfig` set up) —
+  fed to the Ollama service via an EnvironmentFile drop-in.
+
+The Settings panels show only **whether** a credential is set (and, for cloud auth, the resolved
+account name) — never the value. As with everything in Cortex, that configured-state and account
+name are visible to anyone who can reach the unauthenticated dashboard, so keep secrets off any
+deployment you haven't put authentication in front of.
 
 ## Exposing Cortex beyond a trusted LAN
 
