@@ -18,8 +18,11 @@ cd "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"   # repo root
 echo "[cortex-self-update] at $(git rev-parse --short HEAD 2>/dev/null || echo '?') — pulling…"
 git pull --ff-only
 
-echo "[cortex-self-update] installing deps…"
-pnpm install --frozen-lockfile
+echo "[cortex-self-update] installing deps (incl. dev — needed to build)…"
+# The Cortex service runs with NODE_ENV=production, which makes pnpm skip
+# devDependencies — but the build needs them (Tailwind/PostCSS, types). Force a full
+# install regardless of the inherited NODE_ENV.
+NODE_ENV=development pnpm install --frozen-lockfile --prod=false
 
 echo "[cortex-self-update] building…"
 pnpm build
