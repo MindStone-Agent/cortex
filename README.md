@@ -28,9 +28,22 @@ it all onto a single pane of glass. Cortex is the result.
 
 ![Cortex dashboard running on an NVIDIA DGX Spark (GB10)](docs/dashboard.png)
 
-*The dashboard live on a DGX Spark: power-primary GPU telemetry (utilization is unreliable
-on GB10, so power leads), system + host versions, the currently-loaded model, and the full
-model inventory with per-model context windows.*
+*The dashboard live on a DGX Spark: power-primary GPU telemetry (utilization is unreliable on
+GB10, so power leads), system + host versions, and the full model inventory — with per-model
+context windows, the resident models' keep-alive (pinned vs. time-left), and load / unload /
+remove controls.*
+
+![Cortex Models page — discover and pull from the Ollama library and Hugging Face](docs/models.png)
+
+*Model discovery: search the **Ollama library** and **Hugging Face**, then pull straight to your
+local Ollama with live, server-tracked download progress. Your installed models stay on the
+dashboard.*
+
+![Cortex settings — the tabbed modal, Ollama panel](docs/settings.png)
+
+*Settings is a tabbed modal — Theme, Branding, Ollama, Integrations, Tools, and Remote access.
+The **Ollama** tab manages the cloud API key, default context length, and keep-alive (opt-in,
+applied with a scoped restart).*
 
 ![Cortex services page with live health checks](docs/services.png)
 
@@ -58,8 +71,9 @@ health check and a direct link. Edit the catalog in `cortex-config.json`, or let
   inventory stays on the dashboard.
 - **Services catalog** — a configurable grid of the tools you run, each with a live health
   check. **Auto-discovery** (`/api/discover`) probes localhost for common AI-tool ports.
-- **Settings panel** — a gear-icon drawer to toggle the NVIDIA logo and manage tool installs,
-  no file editing required.
+- **Settings** — a tabbed modal (Theme · Branding · Ollama · Integrations · Tools · Remote
+  access) for theming, Ollama server settings, the Hugging Face token, tool installs, and
+  remote access — no file editing required.
 - **One-click tool installs (opt-in)** — install common AI tools (Open WebUI, Jupyter Lab)
   straight from Settings → Tools; ComfyUI, Synapse, Unsloth Studio, and **vLLM** (the
   high-throughput, OpenAI-compatible open-source serving engine) show live status and install
@@ -94,7 +108,7 @@ Active development — **v0.6**.
 | Hardware-mode detection (unified / discrete / cpu-only) | ✅ |
 | Config-driven services + auto-discovery | ✅ |
 | Theme overrides (rebrandable) | ✅ |
-| Settings panel — logo toggle + tool manager | ✅ |
+| Settings — tabbed modal (theme · Ollama · integrations · tools · remote) | ✅ |
 | Ollama version check + opt-in update / restart | ✅ |
 | Ollama server settings — cloud key / context / keep-alive (opt-in) | ✅ |
 | Cortex self-update from the dashboard (opt-in) | ✅ |
