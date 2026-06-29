@@ -37,11 +37,38 @@ export type SystemConfig = {
    * the VPN — only turn it on for a trusted LAN box.
    */
   tailscale?: boolean;
+  /**
+   * Allow the Cortex UI to edit Ollama's server defaults (cloud API key, context
+   * length, keep-alive) and restart Ollama to apply them. OFF by default (see
+   * scripts/enable-ollama-config.sh, which adds an EnvironmentFile drop-in pointing
+   * at a Cortex-owned env file + a root-owned NO-ARG `systemctl restart ollama`
+   * wrapper + a tight sudoers rule). Cortex writes the env file as its own user, so
+   * nothing user-controlled ever reaches root — root only restarts the service.
+   */
+  ollamaConfig?: boolean;
+  /**
+   * Allow the Cortex UI to update itself: git pull + pnpm build + restart the
+   * Cortex service. OFF by default. No root is required for the standard systemd
+   * *user* service deploy (the web user owns the checkout and restarts its own
+   * unit) — enabling is just a deliberate opt-in. Set the restart command with
+   * CORTEX_RESTART_CMD / CORTEX_SERVICE for non-default deploys.
+   */
+  cortexUpdate?: boolean;
+};
+
+export type Integrations = {
+  /**
+   * Hugging Face read token — unlocks gated/private GGUF repos and higher rate
+   * limits. Server-side only; never serialized to the browser. `user` is the
+   * verified account label (from HF whoami) cached for display.
+   */
+  huggingface?: { token?: string; user?: string };
 };
 
 export type CortexConfig = {
   services: Service[];
   system?: SystemConfig;
+  integrations?: Integrations;
 };
 
 /**
@@ -83,7 +110,24 @@ export function getSystemConfig(): Required<SystemConfig> {
     ollamaUpdate: sys.ollamaUpdate === true,
     toolInstall: sys.toolInstall === true,
     tailscale: sys.tailscale === true,
+    ollamaConfig: sys.ollamaConfig === true,
+    cortexUpdate: sys.cortexUpdate === true,
   };
+}
+
+/**
+ * Persist the full Cortex config to cortex-config.json (the runtime config).
+ * The file can hold secrets (API tokens), so it's written owner-only (0600).
+ * The web user owns the file it writes, so it can always read it back.
+ */
+export function writeConfig(cfg: CortexConfig): void {
+  const file = path.join(process.cwd(), "cortex-config.json");
+  fs.writeFileSync(file, JSON.stringify(cfg, null, 2) + "\n", "utf8");
+  try {
+    fs.chmodSync(file, 0o600);
+  } catch {
+    // best-effort — non-POSIX filesystem or perms-locked; not fatal
+  }
 }
 
 /**
@@ -95,9 +139,28 @@ export function addServiceToConfig(service: Service): void {
   if (!cfg.services.some((s) => s.id === service.id)) {
     cfg.services.push(service);
   }
-  fs.writeFileSync(
-    path.join(process.cwd(), "cortex-config.json"),
-    JSON.stringify(cfg, null, 2) + "\n",
-    "utf8"
-  );
+  writeConfig(cfg);
+}
+
+/** The stored Hugging Face integration ({ token, user }) or null if unset. */
+export function getHuggingFace(): { token: string; user?: string } | null {
+  const hf = loadConfig().integrations?.huggingface;
+  const token = typeof hf?.token === "string" ? hf.token.trim() : "";
+  if (!token) return null;
+  return { token, user: typeof hf?.user === "string" ? hf.user : undefined };
+}
+
+/** Just the HF token (for attaching to outbound HF API calls). */
+export function getHuggingFaceToken(): string | null {
+  return getHuggingFace()?.token ?? null;
+}
+
+/** Set or clear the Hugging Face integration. Pass null to remove it. */
+export function setHuggingFace(value: { token: string; user?: string } | null): void {
+  const cfg = loadConfig();
+  const integrations: Integrations = { ...(cfg.integrations ?? {}) };
+  const token = value?.token?.trim();
+  if (token) integrations.huggingface = { token, ...(value?.user ? { user: value.user } : {}) };
+  else delete integrations.huggingface;
+  writeConfig({ ...cfg, integrations });
 }

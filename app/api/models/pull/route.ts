@@ -1,11 +1,18 @@
-// POST /api/models/pull  { ref: string }
-// Proxies the local Ollama daemon's streaming /api/pull (NDJSON) out to the
-// browser as Server-Sent Events so the UI can render a live progress bar.
+// Model pull, registry-backed so downloads survive the browser navigating away.
+//   POST /api/models/pull { ref }  → start-or-attach; streams progress as SSE.
+//   GET  /api/models/pull          → snapshot of all in-flight pulls (reattach).
+//
+// The actual Ollama stream is owned by app/lib/pullRegistry — this route only
+// subscribes/unsubscribes, so closing an SSE connection never cancels the download.
 // `ref` is a full pull ref: "llama3.1:8b" or "hf.co/owner/repo:Q4_K_M".
+
+import { activePulls, startPull, subscribe, type PullEvent } from "@/app/lib/pullRegistry";
 
 export const dynamic = "force-dynamic";
 
-const OLLAMA = "http://localhost:11434";
+export function GET() {
+  return Response.json({ pulls: activePulls() });
+}
 
 export async function POST(req: Request) {
   let ref = "";
@@ -17,47 +24,46 @@ export async function POST(req: Request) {
   }
   if (!ref) return new Response("missing 'ref'", { status: 400 });
 
+  // Start the pull (or attach to one already running). The registry keeps reading
+  // the Ollama stream even if this SSE connection drops.
+  const pull = startPull(ref);
+
   const encoder = new TextEncoder();
+  let unsubscribe = () => {};
+
   const stream = new ReadableStream<Uint8Array>({
-    async start(controller) {
-      const send = (obj: unknown) =>
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
-      try {
-        const res = await fetch(`${OLLAMA}/api/pull`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ model: ref, stream: true }),
-        });
-        if (!res.ok || !res.body) {
-          send({ error: `ollama pull failed (HTTP ${res.status})`, done: true });
-          controller.close();
-          return;
+    start(controller) {
+      const send = (obj: unknown) => {
+        try {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
+        } catch {
+          /* controller already closed */
         }
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let buf = "";
-        for (;;) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buf += decoder.decode(value, { stream: true });
-          let nl: number;
-          while ((nl = buf.indexOf("\n")) >= 0) {
-            const line = buf.slice(0, nl).trim();
-            buf = buf.slice(nl + 1);
-            if (!line) continue;
-            try {
-              send(JSON.parse(line));
-            } catch {
-              /* skip partial/non-JSON line */
-            }
+      };
+
+      // Replay the latest snapshot so a reattaching client renders progress at once.
+      send(pull.latest);
+      if (pull.done) {
+        send({ ...pull.latest, done: true });
+        controller.close();
+        return;
+      }
+
+      unsubscribe = subscribe(ref, (event: PullEvent) => {
+        send(event);
+        if (event.done) {
+          unsubscribe();
+          try {
+            controller.close();
+          } catch {
+            /* already closed */
           }
         }
-        send({ status: "success", done: true });
-        controller.close();
-      } catch (e) {
-        send({ error: e instanceof Error ? e.message : String(e), done: true });
-        controller.close();
-      }
+      });
+    },
+    // Client disconnected — stop writing, but let the registry keep pulling.
+    cancel() {
+      unsubscribe();
     },
   });
 

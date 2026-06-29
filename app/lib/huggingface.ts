@@ -4,8 +4,19 @@
 // directly via `hf.co/{repo}:{quant}`. See MindStone-Agent/cortex#23.
 
 import type { BrowseModel, ModelVariant } from "./modelTypes";
+import { getHuggingFaceToken } from "./config";
 
 const HF = "https://huggingface.co";
+
+// Server-side request headers — attach the configured HF token (if any) so
+// gated/private repos and higher rate limits become available. The token never
+// leaves the server; these helpers run only inside API routes.
+function hfHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { Accept: "application/json" };
+  const token = getHuggingFaceToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return headers;
+}
 
 type HFModel = {
   id: string;
@@ -61,7 +72,7 @@ export async function searchHF(
     cursor ??
     `${HF}/api/models?filter=gguf&search=${encodeURIComponent(q)}&sort=downloads&direction=-1&limit=24`;
   const res = await fetch(url, {
-    headers: { Accept: "application/json" },
+    headers: hfHeaders(),
     cache: "no-store",
     signal: AbortSignal.timeout(20_000),
   });
@@ -97,7 +108,7 @@ function quantRank(label: string): number {
 /** List the distinct GGUF quant variants in an HF repo as pullable refs. */
 export async function hfVariants(repo: string): Promise<ModelVariant[]> {
   const res = await fetch(`${HF}/api/models/${repo}`, {
-    headers: { Accept: "application/json" },
+    headers: hfHeaders(),
     cache: "no-store",
     signal: AbortSignal.timeout(20_000),
   });

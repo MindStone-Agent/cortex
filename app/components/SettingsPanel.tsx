@@ -4,6 +4,8 @@ import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
 import { ToolsManager } from "./ToolsManager";
 import { TailscalePanel } from "./TailscalePanel";
+import { HuggingFaceSettings } from "./HuggingFaceSettings";
+import { OllamaSettings } from "./OllamaSettings";
 
 type Preset = { id: string; label: string; tagline: string };
 
@@ -174,6 +176,16 @@ export function SettingsPanel({
               Fine-tune the name, logo, and individual colors in{" "}
               <span className="font-mono">theme.json</span>.
             </p>
+          </section>
+
+          <section>
+            <h3 className="text-xs uppercase tracking-wider text-ink-400 mb-3">Ollama</h3>
+            <OllamaSettings />
+          </section>
+
+          <section>
+            <h3 className="text-xs uppercase tracking-wider text-ink-400 mb-3">Integrations</h3>
+            <HuggingFaceSettings />
           </section>
 
           <section>
