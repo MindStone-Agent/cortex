@@ -20,9 +20,6 @@ type Sample = {
   gpuPowerLimitW?: number | null;
 };
 
-// Fallback TDP for the power bar when nvidia-smi doesn't report power.limit
-// (NVIDIA DGX Spark / GB10 is ~240 W).
-const DEFAULT_TDP_W = 240;
 const GiB = 1024 ** 3;
 
 function push<T>(arr: T[], v: T, max: number): T[] {
@@ -91,7 +88,11 @@ export function LivePerf() {
       {latest && (() => {
         const mode = latest.mode ?? "split";
         const unified = mode === "unified";
-        const tdp = latest.gpuPowerLimitW ?? DEFAULT_TDP_W;
+        // GB10 reports no power.limit and draws far less than its theoretical max, so a
+        // fixed scale leaves the trace hugging the floor. Auto-scale to the observed peak
+        // (with a floor) so activity is actually visible when a model spins up.
+        const peakPowerW = Math.max(0, ...samples.map((s) => s.gpuPowerW ?? 0));
+        const powerMax = Math.max(60, peakPowerW * 1.2);
         return (
         <div className="space-y-5">
           {/* GPU — power-primary on unified memory (GB10), where util is unreliable (#12) */}
@@ -119,7 +120,7 @@ export function LivePerf() {
                 unified ? s.gpuPowerW ?? 0 : s.gpuUtil ?? 0
               )}
               min={0}
-              max={unified ? tdp : 100}
+              max={unified ? powerMax : 100}
               height={56}
               color={NVGREEN}
               fillOpacity={0.18}

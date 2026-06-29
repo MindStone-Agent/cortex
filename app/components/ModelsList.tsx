@@ -39,6 +39,22 @@ const fmtGB = (b: number) => {
   return (b / GB).toFixed(1) + " GB";
 };
 
+type LoadedInfo = { expiresAt: string | null };
+
+// Keep-alive expiry → a short label. keep_alive:-1 lands ~year 2318 (effectively
+// pinned); otherwise show the time left so the 5-min cycling is legible.
+function expiryLabel(expiresAt: string | null): string | null {
+  if (!expiresAt) return null;
+  const ms = new Date(expiresAt).getTime() - Date.now();
+  if (!Number.isFinite(ms)) return null;
+  if (ms > 365 * 24 * 60 * 60 * 1000) return "pinned";
+  if (ms <= 0) return "expiring";
+  const mins = Math.round(ms / 60000);
+  if (mins < 1) return "<1m";
+  if (mins < 60) return `${mins}m`;
+  return `${Math.round(mins / 60)}h`;
+}
+
 const CATEGORY_ORDER = ["Reasoning", "Coding", "Vision", "Embedding"];
 
 function groupBy<T>(arr: T[], key: (item: T) => string): Map<string, T[]> {
@@ -91,25 +107,69 @@ function ActionBtn({
   );
 }
 
-function OllamaRow({ m, onChanged }: { m: OllamaModel; onChanged: () => void }) {
+function OllamaRow({
+  m,
+  isLoaded,
+  expLabel,
+  onChanged,
+}: {
+  m: OllamaModel;
+  isLoaded: boolean;
+  expLabel: string | null;
+  onChanged: () => void;
+}) {
   const [busy, setBusy] = useState<null | "load" | "unload" | "remove">(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [pending, setPending] = useState(false); // load requested, not resident yet
 
-  const act = async (action: "load" | "unload") => {
-    setBusy(action);
+  // Show an action error briefly, then clear it — so a transient failure doesn't
+  // stick next to a model that's since loaded.
+  const fail = (msg: string) => {
+    setErr(msg);
+    setTimeout(() => setErr(null), 6000);
+  };
+
+  const showLoading = pending && !isLoaded;
+
+  // Load is fire-and-forget server-side (a cold load takes minutes); the request
+  // returns immediately and we wait for the model to appear resident via the poll.
+  const loadModel = async () => {
+    setBusy("load");
     setErr(null);
     try {
       const res = await fetch("/api/models/lifecycle", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, model: m.name }),
+        body: JSON.stringify({ action: "load", model: m.name }),
       });
       const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
       if (!res.ok || !json.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      setPending(true);
+      setTimeout(() => setPending(false), 180_000); // give up the "loading" hint eventually
       onChanged();
     } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e));
+      fail(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const unloadModel = async () => {
+    setBusy("unload");
+    setErr(null);
+    try {
+      const res = await fetch("/api/models/lifecycle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "unload", model: m.name }),
+      });
+      const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      if (!res.ok || !json.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      setPending(false);
+      onChanged();
+    } catch (e) {
+      fail(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(null);
     }
@@ -129,7 +189,7 @@ function OllamaRow({ m, onChanged }: { m: OllamaModel; onChanged: () => void }) 
       setConfirmRemove(false);
       onChanged();
     } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e));
+      fail(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(null);
     }
@@ -141,14 +201,19 @@ function OllamaRow({ m, onChanged }: { m: OllamaModel; onChanged: () => void }) 
         <span
           className={
             "inline-block w-1.5 h-1.5 rounded-full shrink-0 " +
-            (m.loaded ? "bg-nvgreen-500 animate-pulse" : "bg-ink-700")
+            (isLoaded ? "bg-nvgreen-500 animate-pulse" : showLoading ? "bg-gold-500 animate-pulse" : "bg-ink-700")
           }
-          title={m.loaded ? "Currently loaded" : "On disk"}
+          title={isLoaded ? "Resident in memory" : showLoading ? "Loading…" : "On disk"}
         />
         <span className="text-sm text-ink-100 font-mono truncate">{m.name}</span>
-        {m.loaded && (
+        {isLoaded && (
           <span className="shrink-0 text-[9px] uppercase tracking-wider font-mono text-nvgreen-500 border border-nvgreen-500/40 rounded px-1 py-px">
-            loaded
+            loaded{expLabel ? ` · ${expLabel}` : ""}
+          </span>
+        )}
+        {showLoading && (
+          <span className="shrink-0 text-[9px] uppercase tracking-wider font-mono text-gold-400 border border-gold-500/40 rounded px-1 py-px">
+            loading…
           </span>
         )}
         {err && (
@@ -168,21 +233,21 @@ function OllamaRow({ m, onChanged }: { m: OllamaModel; onChanged: () => void }) 
         <span className="text-ink-300 w-16 text-right">{fmtGB(m.size)}</span>
         {/* Lifecycle actions — subtle until hover, always reachable */}
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition">
-          {m.loaded ? (
+          {isLoaded ? (
             <ActionBtn
               label="Unload"
-              title="Evict from VRAM"
-              onClick={() => act("unload")}
+              title="Evict from memory"
+              onClick={unloadModel}
               busy={busy === "unload"}
               disabled={busy !== null}
             />
           ) : (
             <ActionBtn
               label="Load"
-              title="Load into VRAM (stays resident until unloaded)"
-              onClick={() => act("load")}
-              busy={busy === "load"}
-              disabled={busy !== null}
+              title="Load into memory (pinned — stays resident until unloaded)"
+              onClick={loadModel}
+              busy={busy === "load" || showLoading}
+              disabled={busy !== null || showLoading}
             />
           )}
           {confirmRemove ? (
@@ -230,6 +295,9 @@ function ComfyRow({ m }: { m: ComfyModel }) {
 export function ModelsList() {
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Live resident-model state (name -> keep-alive), polled fast + cheap from /api/ps.
+  const [loadedMap, setLoadedMap] = useState<Record<string, LoadedInfo>>({});
+  const [liveReady, setLiveReady] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -243,6 +311,25 @@ export function ModelsList() {
     }
   }, []);
 
+  const loadLoaded = useCallback(async () => {
+    try {
+      const res = await fetch("/api/models/loaded");
+      if (!res.ok) return;
+      const json = (await res.json()) as { loaded?: { name: string; expiresAt: string | null }[] };
+      const map: Record<string, LoadedInfo> = {};
+      for (const e of json.loaded ?? []) map[e.name] = { expiresAt: e.expiresAt };
+      setLoadedMap(map);
+      setLiveReady(true);
+    } catch {
+      /* keep last known */
+    }
+  }, []);
+
+  const refresh = useCallback(() => {
+    void load();
+    void loadLoaded();
+  }, [load, loadLoaded]);
+
   useEffect(() => {
     const initial = setTimeout(load, 0);
     const interval = setInterval(load, 30_000);
@@ -251,6 +338,16 @@ export function ModelsList() {
       clearInterval(interval);
     };
   }, [load]);
+
+  // Resident state cycles on a 5-min keep-alive, so poll it fast (and cheap).
+  useEffect(() => {
+    const initial = setTimeout(loadLoaded, 0);
+    const interval = setInterval(loadLoaded, 4000);
+    return () => {
+      clearTimeout(initial);
+      clearInterval(interval);
+    };
+  }, [loadLoaded]);
 
   if (error && !data) {
     return (
@@ -319,9 +416,21 @@ export function ModelsList() {
                     <span className="text-xs font-mono text-ink-600">{models.length}</span>
                   </div>
                   <ul>
-                    {models.map((m) => (
-                      <OllamaRow key={m.name} m={m} onChanged={load} />
-                    ))}
+                    {models.map((m) => {
+                      const live = loadedMap[m.name];
+                      // Once the fast poll has run, it's authoritative; before that,
+                      // fall back to the (slower) /api/models loaded flag.
+                      const isLoaded = liveReady ? live !== undefined : m.loaded;
+                      return (
+                        <OllamaRow
+                          key={m.name}
+                          m={m}
+                          isLoaded={isLoaded}
+                          expLabel={live ? expiryLabel(live.expiresAt) : null}
+                          onChanged={refresh}
+                        />
+                      );
+                    })}
                   </ul>
                 </div>
               );

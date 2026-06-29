@@ -41,12 +41,33 @@ export async function POST(req: Request) {
     );
   }
 
+  const genBody = JSON.stringify({
+    model,
+    keep_alive: action === "load" ? -1 : 0, // load pins (-1); unload evicts (0)
+    stream: false,
+  });
+
+  // A cold load can take 1–2 minutes for a large model. Don't hold the HTTP request
+  // open for it — that long request resets/times out (esp. under memory pressure) and
+  // surfaces as "fetch failed" even when the load succeeds. Instead fire the load and
+  // return immediately; the dashboard reflects resident state from /api/ps. Unload is
+  // fast (just evicts), so we still await it for a clean confirmation.
+  if (action === "load") {
+    void fetch(`${OLLAMA}/api/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: genBody,
+    }).catch(() => {
+      /* fire-and-forget — loaded state shows up via /api/ps once it's resident */
+    });
+    return NextResponse.json({ ok: true, action, model, started: true });
+  }
+
   try {
     const res = await fetch(`${OLLAMA}/api/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      // No prompt → Ollama just loads/unloads. keep_alive drives residency.
-      body: JSON.stringify({ model, keep_alive: action === "load" ? -1 : 0, stream: false }),
+      body: genBody,
     });
     if (!res.ok) {
       const detail = (await res.text().catch(() => "")).slice(-500).trim();
