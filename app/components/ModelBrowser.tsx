@@ -25,7 +25,16 @@ function ago(ms: number): string {
 
 const vkey = (source: ModelSource, id: string) => `${source}:${id}`;
 
-type PullState = { key: string; ref: string; status: string; pct: number | null; error?: boolean; done?: boolean };
+type PullState = {
+  ref: string;
+  status: string;
+  pct: number | null;
+  error?: boolean;
+  done?: boolean;
+  /** The model-card key this pull was started from (for inline disable state).
+   *  Undefined for pulls reattached on mount (we only know the ref then). */
+  cardKey?: string;
+};
 
 export function ModelBrowser() {
   const [source, setSource] = useState<ModelSource>("ollama");
@@ -38,7 +47,9 @@ export function ModelBrowser() {
   const [installed, setInstalled] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<string | null>(null);
   const [variants, setVariants] = useState<Record<string, ModelVariant[] | "loading" | "error">>({});
-  const [pull, setPull] = useState<PullState | null>(null);
+  // Keyed by pull ref. Multiple concurrent downloads, and they survive navigation:
+  // the server owns each pull, and we reattach to in-flight ones on mount.
+  const [pulls, setPulls] = useState<Record<string, PullState>>({});
 
   // Debounce the search box.
   useEffect(() => {
@@ -159,18 +170,32 @@ export function ModelBrowser() {
     [expanded, variants],
   );
 
-  const pullRef = useRef<PullState | null>(null);
-  pullRef.current = pull;
+  const dismissPull = useCallback((ref: string) => {
+    setPulls((prev) => {
+      if (!(ref in prev)) return prev;
+      const next = { ...prev };
+      delete next[ref];
+      return next;
+    });
+  }, []);
 
-  const startPull = useCallback(
-    async (m: BrowseModel, variant: ModelVariant) => {
-      const k = vkey(m.source, m.id);
-      setPull({ key: k, ref: variant.ref, status: "starting…", pct: null });
+  // Refs we already have a live SSE reader for — guards against double-attaching
+  // (e.g. reattach-on-mount racing a user click).
+  const attached = useRef<Set<string>>(new Set());
+
+  const attachPull = useCallback(
+    async (ref: string, cardKey?: string) => {
+      if (attached.current.has(ref)) return;
+      attached.current.add(ref);
+      setPulls((prev) => ({
+        ...prev,
+        [ref]: { ref, status: "starting…", pct: prev[ref]?.pct ?? null, cardKey },
+      }));
       try {
         const res = await fetch("/api/models/pull", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ref: variant.ref }),
+          body: JSON.stringify({ ref }),
         });
         if (!res.body) throw new Error("no stream");
         const reader = res.body.getReader();
@@ -191,26 +216,75 @@ export function ModelBrowser() {
             } catch {
               continue;
             }
-            if (obj.error) {
-              setPull({ key: k, ref: variant.ref, status: obj.error, pct: null, error: true, done: true });
-              continue;
-            }
-            const pct =
-              obj.total && obj.total > 0 ? Math.round(((obj.completed ?? 0) / obj.total) * 100) : pullRef.current?.pct ?? null;
-            const done = obj.done || obj.status === "success";
-            setPull({ key: k, ref: variant.ref, status: done ? "installed ✓" : obj.status ?? "…", pct: done ? 100 : pct, done });
-            if (done) {
-              if (m.source === "ollama") setInstalled((s) => new Set(s).add(m.id));
-              void loadInstalled();
-            }
+            const isDone = obj.done || obj.status === "success";
+            setPulls((prev) => {
+              const cur = prev[ref] ?? { ref, status: "", pct: null, cardKey };
+              if (obj.error) {
+                return { ...prev, [ref]: { ...cur, status: obj.error, pct: null, error: true, done: true } };
+              }
+              const pct =
+                obj.total && obj.total > 0
+                  ? Math.round(((obj.completed ?? 0) / obj.total) * 100)
+                  : cur.pct ?? null;
+              return {
+                ...prev,
+                [ref]: {
+                  ...cur,
+                  status: isDone ? "installed ✓" : obj.status ?? "…",
+                  pct: isDone ? 100 : pct,
+                  done: isDone,
+                },
+              };
+            });
+            if (isDone && !obj.error) void loadInstalled();
           }
         }
       } catch (e) {
-        setPull({ key: k, ref: variant.ref, status: e instanceof Error ? e.message : String(e), pct: null, error: true, done: true });
+        setPulls((prev) => ({
+          ...prev,
+          [ref]: {
+            ...(prev[ref] ?? { ref, pct: null }),
+            ref,
+            status: e instanceof Error ? e.message : String(e),
+            pct: null,
+            error: true,
+            done: true,
+          },
+        }));
+      } finally {
+        attached.current.delete(ref);
       }
     },
     [loadInstalled],
   );
+
+  const startPull = useCallback(
+    (m: BrowseModel, variant: ModelVariant) => {
+      void attachPull(variant.ref, vkey(m.source, m.id));
+    },
+    [attachPull],
+  );
+
+  // Reattach to any download still in flight (started before this mount/navigation).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/models/pull");
+        if (!res.ok) return;
+        const j = (await res.json()) as { pulls?: { ref: string; done?: boolean }[] };
+        if (cancelled) return;
+        for (const p of j.pulls ?? []) {
+          if (!p.done) void attachPull(p.ref);
+        }
+      } catch {
+        /* non-fatal */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [attachPull]);
 
   const results = data?.results ?? [];
 
@@ -276,6 +350,50 @@ export function ModelBrowser() {
         )}
       </div>
 
+      {/* Active downloads — server-tracked, so they persist across navigation and
+          reattach when you return to this page. */}
+      {Object.keys(pulls).length > 0 && (
+        <div className="mb-5 rounded-xl border border-ink-800 bg-ink-900/40 p-3 space-y-2.5">
+          <div className="text-[10px] uppercase tracking-wider font-mono text-ink-400">
+            Active downloads
+          </div>
+          {Object.values(pulls).map((p) => (
+            <div key={p.ref}>
+              <div className="flex items-center justify-between gap-2 text-[11px] font-mono mb-1">
+                <span className={"truncate " + (p.error ? "text-error" : "text-ink-300")} title={p.ref}>
+                  {p.ref.length > 44 ? "…" + p.ref.slice(-42) : p.ref}
+                </span>
+                <span className="flex items-center gap-2 shrink-0">
+                  <span
+                    className={p.error ? "text-error" : p.done ? "text-nvgreen-500" : "text-ink-300"}
+                  >
+                    {p.status}
+                    {p.pct != null && !p.done ? ` ${p.pct}%` : ""}
+                  </span>
+                  {(p.done || p.error) && (
+                    <button
+                      onClick={() => dismissPull(p.ref)}
+                      title="Dismiss"
+                      className="text-ink-500 hover:text-ink-200 leading-none text-sm"
+                    >
+                      ×
+                    </button>
+                  )}
+                </span>
+              </div>
+              {!p.error && (
+                <div className="h-1 rounded-full bg-ink-800 overflow-hidden">
+                  <div
+                    className="h-full bg-gold-500 transition-all"
+                    style={{ width: `${p.pct ?? (p.done ? 100 : 5)}%` }}
+                  />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Results */}
       {loading ? (
         <p className="text-sm text-ink-400">Searching…</p>
@@ -291,7 +409,6 @@ export function ModelBrowser() {
               const isInstalled = m.source === "ollama" && installed.has(m.id);
               const vlist = variants[k];
               const isExpanded = expanded === k;
-              const activePull = pull && pull.key === k ? pull : null;
               return (
                 <div
                   key={k}
@@ -371,36 +488,13 @@ export function ModelBrowser() {
                             <button
                               key={v.ref}
                               onClick={() => startPull(m, v)}
-                              disabled={!!activePull && !activePull.done}
+                              disabled={!!pulls[v.ref] && !pulls[v.ref]?.done}
                               title={v.detail ?? v.ref}
                               className="text-[11px] font-mono px-2 py-1 rounded-md border border-ink-700 text-ink-200 hover:border-gold-500/50 hover:text-gold-500 disabled:opacity-40 transition-colors"
                             >
                               {v.label}
                             </button>
                           ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Pull progress */}
-                  {activePull && (
-                    <div className="pt-1">
-                      <div className="flex items-center justify-between text-[10px] font-mono mb-1">
-                        <span className={activePull.error ? "text-error" : "text-ink-400"} title={activePull.ref}>
-                          {activePull.ref.length > 36 ? "…" + activePull.ref.slice(-34) : activePull.ref}
-                        </span>
-                        <span className={activePull.error ? "text-error" : activePull.done ? "text-nvgreen-500" : "text-ink-300"}>
-                          {activePull.status}
-                          {activePull.pct != null && !activePull.done ? ` ${activePull.pct}%` : ""}
-                        </span>
-                      </div>
-                      {!activePull.error && (
-                        <div className="h-1 rounded-full bg-ink-800 overflow-hidden">
-                          <div
-                            className="h-full bg-gold-500 transition-all"
-                            style={{ width: `${activePull.pct ?? (activePull.done ? 100 : 5)}%` }}
-                          />
                         </div>
                       )}
                     </div>

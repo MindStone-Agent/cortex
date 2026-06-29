@@ -47,29 +47,39 @@ health check and a direct link. Edit the catalog in `cortex-config.json`, or let
   utilization is unreliable there (it sticks high while a process is merely resident), so
   util is de-emphasized; on discrete GPUs, utilization is primary. Memory shows % and GB.
 - **Models on the dashboard** — the models currently loaded and locally available in Ollama,
-  categorized, with the **context window per model**.
+  categorized, with the **context window per model**, plus per-model **lifecycle controls**:
+  load a model into memory, unload it to free VRAM, or remove it from disk.
 - **Model discovery + pull** — a dedicated **Models** page to find models you *don't* have yet:
   search the **Ollama library** and **Hugging Face**, with a manual **Refresh** to pick up
   newly-announced Ollama models immediately, then **pull** a chosen model or size straight to
-  your local Ollama with **live download progress**. Discovery only — your installed inventory
-  stays on the dashboard.
+  your local Ollama with **live download progress**. Downloads are **server-tracked**, so they
+  keep running and **reattach** if you navigate away. Optionally add a **Hugging Face token**
+  (Settings → Integrations) to reach gated/private GGUF repos. Discovery only — your installed
+  inventory stays on the dashboard.
 - **Services catalog** — a configurable grid of the tools you run, each with a live health
   check. **Auto-discovery** (`/api/discover`) probes localhost for common AI-tool ports.
 - **Settings panel** — a gear-icon drawer to toggle the NVIDIA logo and manage tool installs,
   no file editing required.
 - **One-click tool installs (opt-in)** — install common AI tools (Open WebUI, Jupyter Lab)
-  straight from Settings → Tools; ComfyUI, Synapse, and Unsloth Studio show live status and
-  install notes. A successfully installed tool is auto-added to your services. Off by
-  default, gated behind `system.toolInstall`.
+  straight from Settings → Tools; ComfyUI, Synapse, Unsloth Studio, and **vLLM** (the
+  high-throughput, OpenAI-compatible open-source serving engine) show live status and install
+  notes. A successfully installed tool is auto-added to your services. Off by default, gated
+  behind `system.toolInstall`.
 - **Ollama version + updates (opt-in)** — see the installed Ollama version, get flagged when
   a newer release is available, and optionally update + restart Ollama from the dashboard.
+- **Ollama server settings (opt-in)** — set Ollama's **Cloud API key** (shows the signed-in
+  account), **default context length**, and **keep-alive / model timeout** from Settings →
+  Ollama; applying restarts Ollama. Off by default, gated behind `system.ollamaConfig`.
+- **Cortex self-update (opt-in)** — pull, rebuild, and restart Cortex from the dashboard when
+  `origin` is ahead. No root on the standard systemd-user deploy. Off by default, gated behind
+  `system.cortexUpdate`.
 - **Themable** — rebrand the name, logo, and color palette via `theme.json`, no rebuild
   required.
 - **Hardware-aware** — detects unified (GB10) / discrete-VRAM / CPU-only and adapts.
 
 ## Status
 
-Active development — **v0.5**.
+Active development — **v0.6**.
 
 | Milestone | State |
 | --- | --- |
@@ -78,12 +88,17 @@ Active development — **v0.5**.
 | Live performance telemetry over SSE | ✅ |
 | Models view (Ollama) + context window | ✅ |
 | Model discovery + pull — Ollama library + Hugging Face | ✅ |
+| Model lifecycle controls — load / unload / remove | ✅ |
+| Resilient downloads — server-tracked, reattach on return | ✅ |
+| Hugging Face token — gated / private repos (opt-in) | ✅ |
 | Hardware-mode detection (unified / discrete / cpu-only) | ✅ |
 | Config-driven services + auto-discovery | ✅ |
 | Theme overrides (rebrandable) | ✅ |
 | Settings panel — logo toggle + tool manager | ✅ |
 | Ollama version check + opt-in update / restart | ✅ |
-| One-click tool installs (opt-in) | ✅ |
+| Ollama server settings — cloud key / context / keep-alive (opt-in) | ✅ |
+| Cortex self-update from the dashboard (opt-in) | ✅ |
+| One-click tool installs incl. vLLM (opt-in) | ✅ |
 | `install.sh` + OpenWebUI setup script | ✅ |
 | Public release — docs, demo | ◻ (v1.0) |
 
@@ -151,6 +166,16 @@ Face** APIs; the Ollama library listing is cached (~24 h) with a manual **Refres
 and pulls stream their download progress straight from Ollama. No extra configuration or
 privileged access is needed — pulling uses Ollama's own API.
 
+**Hugging Face token (optional).** To search and pull **gated or private** GGUF repos (and lift
+anonymous rate limits), add a Hugging Face **read token** in **Settings → Integrations**. It's
+verified on save, stored server-side in `cortex-config.json` (owner-only), attached to Cortex's
+Hugging Face API calls, and never sent to the browser. Clear it any time to revert to anonymous,
+public-only search.
+
+**Model lifecycle + resilient downloads.** From the dashboard inventory you can **load**, **unload**,
+or **remove** a model (Ollama's HTTP API only — no privileged access). Pulls are tracked
+server-side, so a download keeps running and reattaches if you leave and return to the Models page.
+
 ### Ollama updates from the dashboard (opt-in)
 
 The dashboard shows the installed Ollama version and flags when a newer release is
@@ -172,13 +197,53 @@ user-controlled ever reaches root. Without this opt-in, the dashboard simply sho
 LAN deployment. To revoke: `rm /etc/sudoers.d/cortex-ollama-update` and set the flag back
 to `false`.
 
+### Ollama server settings from the dashboard (opt-in)
+
+**Settings → Ollama** can view and change Ollama's server defaults: the **Cloud API key**
+(authenticates cloud models — Cortex validates it and shows the signed-in account), the
+**default context length** (`OLLAMA_CONTEXT_LENGTH`), and the **default keep-alive / model
+timeout** (`OLLAMA_KEEP_ALIVE`). Cortex writes these to a managed env file it owns; **Apply**
+restarts Ollama so they take effect.
+
+Because applying restarts a system service, it's **off by default** and gated:
+
+```bash
+sudo ./scripts/enable-ollama-config.sh   # EnvironmentFile drop-in + no-arg restart wrapper + sudoers
+# then set  "system": { "ollamaConfig": true }  in cortex-config.json and restart Cortex
+```
+
+The setup installs a root-owned, **argument-less** restart wrapper
+([`scripts/cortex-ollama-restart.sh`](scripts/cortex-ollama-restart.sh)) plus a tight sudoers
+rule — Cortex writes the env file as its own user, so **nothing user-controlled reaches root**
+(root only restarts the service). The API key lives in the managed env file
+(`/etc/cortex/ollama.env`, not world-readable) and is never sent to the browser; native
+`ollama signin` still works on the CLI. To revoke: `rm /etc/sudoers.d/cortex-ollama-config
+/etc/systemd/system/ollama.service.d/cortex-env.conf`, `systemctl daemon-reload`, and set the
+flag back to `false`.
+
+### Cortex self-update from the dashboard (opt-in)
+
+The System-stats card shows the running Cortex version and flags when your checkout is behind
+`origin`. It can **pull, rebuild, and restart** Cortex for you — `git pull` → `pnpm install` →
+`pnpm build` → restart, all **as the Cortex web user** (no root on the standard systemd-user
+deploy). A failed pull or build **aborts before any restart**, so a broken build never goes
+live, and the restart is detached so the HTTP response returns first.
+
+It's **off by default** — enable with `"system": { "cortexUpdate": true }` in
+`cortex-config.json` and restart Cortex (no setup script needed). For non-systemd deploys
+(Docker, pm2, …), set `CORTEX_RESTART_CMD` (the full restart command) or `CORTEX_SERVICE` (the
+unit name, default `cortex-web`) in the Cortex service environment. Left off, the card just shows
+the version and an "update available" badge.
+
 ### Tool installs from the dashboard (opt-in)
 
 **Settings → Tools** lists a small catalog of AI tools with live status
 (`running` / `available` / `unsupported` for your architecture). Docker-based tools
 (Open WebUI, Jupyter Lab) can be installed with one click; script-based tools (ComfyUI,
-Synapse, Unsloth Studio) show their status and a short install note. When a UI-serving tool
-installs successfully, Cortex adds it to your services page automatically.
+Synapse, Unsloth Studio, and **vLLM**) show their status and a short install note — vLLM,
+which serves one model per container, includes a ready-to-run command (multi-arch image,
+and it picks up your Hugging Face token for gated models). When a UI-serving tool installs
+successfully, Cortex adds it to your services page automatically.
 
 One-click installs are **off by default**. To enable them, set `"system": { "toolInstall":
 true }` in `cortex-config.json` and restart Cortex. No sudo is involved — the Cortex web
@@ -226,6 +291,13 @@ hardening steps.
 - **[`scripts/install.sh`](scripts/install.sh)** — single-command setup (above); idempotent.
 - **[`scripts/enable-ollama-update.sh`](scripts/enable-ollama-update.sh)** — opt in to
   UI-driven Ollama updates (scoped passwordless-sudo wrapper); see above.
+- **[`scripts/enable-ollama-config.sh`](scripts/enable-ollama-config.sh)** — opt in to
+  UI-driven Ollama **settings** (cloud key / context / keep-alive): adds an EnvironmentFile
+  drop-in + a no-arg `systemctl restart ollama` wrapper ([`scripts/cortex-ollama-restart.sh`](scripts/cortex-ollama-restart.sh))
+  + sudoers; see *Ollama server settings* above.
+- **[`scripts/cortex-self-update.sh`](scripts/cortex-self-update.sh)** — the self-update
+  routine the dashboard runs (git pull + build + detached restart, as the web user, no root);
+  see *Cortex self-update* above.
 - **[`scripts/enable-tailscale-control.sh`](scripts/enable-tailscale-control.sh)** — opt in
   to UI-driven Tailscale control (installs Tailscale + a verb-pinned scoped wrapper); see
   *Remote access via Tailscale* above.

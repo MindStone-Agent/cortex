@@ -72,6 +72,25 @@ export const TOOLS: Tool[] = [
     },
   },
   {
+    id: "vllm",
+    name: "vLLM",
+    description:
+      "High-throughput, OpenAI-compatible LLM serving engine (serves one model per container). Not NVIDIA's own — that's NIM; vLLM is the leading open-source server and runs great on NVIDIA GPUs.",
+    archs: ["amd64", "arm64"],
+    ui: { port: 8000, healthPath: "/health" },
+    side: "nvidia",
+    icon: "api",
+    install: {
+      kind: "script",
+      note:
+        "Serves one model at a time over an OpenAI-compatible API. The image is multi-arch " +
+        "(amd64 + arm64). Pick your model and run, e.g.: `docker run -d --name vllm --gpus all " +
+        "-p 8000:8000 -v ~/.cache/huggingface:/root/.cache/huggingface " +
+        "-e HUGGING_FACE_HUB_TOKEN=<token> vllm/vllm-openai:latest --model <hf-repo>`. " +
+        "It appears here once it's serving on :8000.",
+    },
+  },
+  {
     id: "unsloth-studio",
     name: "Unsloth Studio",
     description: "No-code fine-tuning UI (Gemma, Qwen, DeepSeek). GPU fine-tuning in the browser.",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type OllamaModel = {
   name: string;
@@ -56,9 +56,87 @@ function prettyType(t: string): string {
   return t.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function OllamaRow({ m }: { m: OllamaModel }) {
+function ActionBtn({
+  label,
+  onClick,
+  busy = false,
+  disabled = false,
+  danger = false,
+  title,
+}: {
+  label: string;
+  onClick: () => void;
+  busy?: boolean;
+  disabled?: boolean;
+  danger?: boolean;
+  title?: string;
+}) {
+  const tone = danger
+    ? "border-error/40 text-error hover:bg-error/10"
+    : "border-ink-700 text-ink-300 hover:bg-ink-800 hover:text-ink-100";
   return (
-    <li className="flex items-center justify-between gap-3 py-1.5 border-b border-ink-800/50 last:border-0">
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled || busy}
+      title={title}
+      className={
+        "rounded border px-1.5 py-px text-[10px] uppercase tracking-wider font-mono transition " +
+        "disabled:opacity-40 disabled:cursor-not-allowed " +
+        tone
+      }
+    >
+      {busy ? "…" : label}
+    </button>
+  );
+}
+
+function OllamaRow({ m, onChanged }: { m: OllamaModel; onChanged: () => void }) {
+  const [busy, setBusy] = useState<null | "load" | "unload" | "remove">(null);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const act = async (action: "load" | "unload") => {
+    setBusy(action);
+    setErr(null);
+    try {
+      const res = await fetch("/api/models/lifecycle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, model: m.name }),
+      });
+      const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      if (!res.ok || !json.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      onChanged();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const remove = async () => {
+    setBusy("remove");
+    setErr(null);
+    try {
+      const res = await fetch("/api/models/lifecycle", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: m.name }),
+      });
+      const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      if (!res.ok || !json.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      setConfirmRemove(false);
+      onChanged();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <li className="group flex items-center justify-between gap-3 py-1.5 border-b border-ink-800/50 last:border-0">
       <div className="flex items-center gap-2 min-w-0">
         <span
           className={
@@ -73,6 +151,11 @@ function OllamaRow({ m }: { m: OllamaModel }) {
             loaded
           </span>
         )}
+        {err && (
+          <span className="shrink-0 text-[10px] font-mono text-error truncate" title={err}>
+            {err}
+          </span>
+        )}
       </div>
       <div className="flex items-center gap-3 text-xs font-mono text-ink-400 shrink-0">
         {m.paramSize && <span>{m.paramSize}</span>}
@@ -83,6 +166,51 @@ function OllamaRow({ m }: { m: OllamaModel }) {
         )}
         {m.quant && <span className="text-ink-600">{m.quant}</span>}
         <span className="text-ink-300 w-16 text-right">{fmtGB(m.size)}</span>
+        {/* Lifecycle actions — subtle until hover, always reachable */}
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition">
+          {m.loaded ? (
+            <ActionBtn
+              label="Unload"
+              title="Evict from VRAM"
+              onClick={() => act("unload")}
+              busy={busy === "unload"}
+              disabled={busy !== null}
+            />
+          ) : (
+            <ActionBtn
+              label="Load"
+              title="Load into VRAM (stays resident until unloaded)"
+              onClick={() => act("load")}
+              busy={busy === "load"}
+              disabled={busy !== null}
+            />
+          )}
+          {confirmRemove ? (
+            <>
+              <ActionBtn
+                label="Confirm"
+                danger
+                title={`Delete ${m.name} from disk`}
+                onClick={remove}
+                busy={busy === "remove"}
+                disabled={busy !== null}
+              />
+              <ActionBtn
+                label="Cancel"
+                onClick={() => setConfirmRemove(false)}
+                disabled={busy !== null}
+              />
+            </>
+          ) : (
+            <ActionBtn
+              label="Remove"
+              danger
+              title="Delete from disk"
+              onClick={() => setConfirmRemove(true)}
+              disabled={busy !== null}
+            />
+          )}
+        </div>
       </div>
     </li>
   );
@@ -103,28 +231,26 @@ export function ModelsList() {
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch("/api/models");
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const json = (await res.json()) as Data;
+      setData(json);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }, []);
+
   useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      try {
-        const res = await fetch("/api/models");
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        const json = (await res.json()) as Data;
-        if (!cancelled) {
-          setData(json);
-          setError(null);
-        }
-      } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
-      }
-    };
-    load();
+    const initial = setTimeout(load, 0);
     const interval = setInterval(load, 30_000);
     return () => {
-      cancelled = true;
+      clearTimeout(initial);
       clearInterval(interval);
     };
-  }, []);
+  }, [load]);
 
   if (error && !data) {
     return (
@@ -194,7 +320,7 @@ export function ModelsList() {
                   </div>
                   <ul>
                     {models.map((m) => (
-                      <OllamaRow key={m.name} m={m} />
+                      <OllamaRow key={m.name} m={m} onChanged={load} />
                     ))}
                   </ul>
                 </div>
