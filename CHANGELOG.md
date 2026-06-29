@@ -12,6 +12,29 @@ clean install point and its notes live here.
 Tracked toward **v1.0** (see the [v1.0 milestone](https://github.com/MindStone-Agent/cortex/milestone/1)):
 a verified clean install on a stock DGX Spark and a demo + landing pitch.
 
+## [0.7.0] — 2026-06-29
+
+### Added
+- **Settings is now a tabbed modal** (#33) — a centered modal with a left section-nav rail
+  (Theme · Branding · Ollama · Integrations · Tools · Remote access), replacing the right-side
+  slide-out drawer that had outgrown its width. Only the active section renders; Esc /
+  overlay-click to close.
+
+### Fixed
+- **Model dashboard polish** (#35), earned running v0.6.0 on a DGX Spark:
+  - **Non-blocking Load** — the load action no longer holds the request open for a 1–2 min cold
+    load (which reset and surfaced "fetch failed" even on success). It returns immediately and
+    the row shows a "loading…" hint until the model is resident.
+  - **Loaded legibility** — a lightweight `/api/models/loaded` poll (every 4s) shows the
+    keep-alive on resident models (`loaded · pinned` vs `loaded · 4m`).
+  - **Stale errors** — row action errors auto-dismiss after a few seconds.
+  - **GPU power chart auto-scale** — fixes the squished 0–240 W scale on GB10 (which reports no
+    power.limit), so the trace reflects real activity.
+
+### Changed
+- **README refresh** (#36) — current screenshots (dashboard, model discovery, the tabbed
+  settings modal, services) and v0.7 feature/status updates.
+
 ## [0.6.0] — 2026-06-29
 
 ### Added
@@ -119,7 +142,8 @@ a verified clean install on a stock DGX Spark and a demo + landing pitch.
 - Open WebUI reconfigure script (`:ollama` → `:main` image, preserves the data
   volume, fixes the SSRF guard for private-LAN image URLs).
 
-[Unreleased]: https://github.com/MindStone-Agent/cortex/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/MindStone-Agent/cortex/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/MindStone-Agent/cortex/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/MindStone-Agent/cortex/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/MindStone-Agent/cortex/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/MindStone-Agent/cortex/compare/v0.3.0...v0.4.0
