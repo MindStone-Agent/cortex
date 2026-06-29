@@ -128,8 +128,8 @@ export function SettingsPanel({
 
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60" onClick={onClose} aria-hidden />
-      <div className="relative z-[101] flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-ink-800 bg-ink-950 shadow-2xl">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-md" onClick={onClose} aria-hidden />
+      <div className="relative z-[101] flex max-h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-ink-800 bg-ink-950 shadow-2xl">
         {/* Header */}
         <div className="flex shrink-0 items-center justify-between border-b border-ink-800 px-5 py-4">
           <h2 className="text-lg font-medium text-ink-100">Settings</h2>
