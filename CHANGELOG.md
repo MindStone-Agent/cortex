@@ -12,6 +12,25 @@ clean install point and its notes live here.
 Tracked toward **v1.0** (see the [v1.0 milestone](https://github.com/MindStone-Agent/cortex/milestone/1)):
 a verified clean install on a stock DGX Spark and a demo + landing pitch.
 
+## [0.7.1] — 2026-08-03
+
+### Fixed
+- **Ollama library catalog was stuck on the bundled fallback** (#38), found running v0.7.0 on a
+  DGX Spark: the Models page showed 16 models with an amber `bundled` badge, and **Refresh
+  appeared to do nothing**. Two stacked defects:
+  - **Upstream markup change.** `ollama.com/library` no longer emits the `x-test-*` attributes
+    the parser keyed on. The page still returns 200 with 232 models, but the parser matched
+    **zero** of them and tripped the "implausibly few models" guard on every scrape. Added a
+    structural parser (library hrefs + the Tailwind pill classes that distinguish capabilities
+    from sizes; pull count and updated stamp anchored on their `Pulls` / `ago` labels rather
+    than span order). The `x-test-*` path is tried first and kept, so a markup change in either
+    direction degrades to the other parser instead of to an empty catalog.
+  - **A forced refresh could not report its own failure.** `getIndex({ force: true })` caught
+    the scrape error and returned the stale cache, so `/api/models/refresh` answered `ok: true`
+    with unchanged data and its 502 branch was unreachable — which is why a broken scrape stayed
+    invisible for roughly 18 days. A forced refresh now propagates the failure; non-forced reads
+    still degrade quietly so a page render never depends on ollama.com being reachable.
+
 ## [0.7.0] — 2026-06-29
 
 ### Added
@@ -142,7 +161,8 @@ a verified clean install on a stock DGX Spark and a demo + landing pitch.
 - Open WebUI reconfigure script (`:ollama` → `:main` image, preserves the data
   volume, fixes the SSRF guard for private-LAN image URLs).
 
-[Unreleased]: https://github.com/MindStone-Agent/cortex/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/MindStone-Agent/cortex/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/MindStone-Agent/cortex/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/MindStone-Agent/cortex/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/MindStone-Agent/cortex/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/MindStone-Agent/cortex/compare/v0.4.0...v0.5.0
