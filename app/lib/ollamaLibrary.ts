@@ -44,8 +44,12 @@ function firstGroup(block: string, re: RegExp): string {
   return m ? stripTags(m[1]) : "";
 }
 
-/** Parse the library HTML into entries, keyed off the stable x-test-* anchors. */
-export function parseLibrary(html: string): LibEntry[] {
+/**
+ * Parse via the `x-test-*` anchors. Ollama shipped these for their own test
+ * suite and removed them from /library some time before 2026-08-03; kept as the
+ * preferred path because it is far more stable than styling when it is present.
+ */
+function parseByTestAnchors(html: string): LibEntry[] {
   const blocks = html.split("<li x-test-model").slice(1);
   const out: LibEntry[] = [];
   for (const b of blocks) {
@@ -64,6 +68,49 @@ export function parseLibrary(html: string): LibEntry[] {
     out.push({ name, description, capabilities, sizes, pulls, updated });
   }
   return out;
+}
+
+/**
+ * Parse the current (post-x-test) markup. Each model is an `<li>` wrapping an
+ * `<a href="/library/NAME">`; capability and size pills are distinguished only
+ * by their Tailwind background — capabilities are `bg-indigo-50`, sizes are
+ * `bg-[#ddf4ff]`. Pull count and last-updated live in a trailing metadata `<p>`
+ * as bare `<span>`s next to the literals "Pulls" / "ago", which is what we
+ * anchor on rather than span order.
+ */
+function parseByStructure(html: string): LibEntry[] {
+  const blocks = html.split(/<li\b/).slice(1);
+  const out: LibEntry[] = [];
+  for (const b of blocks) {
+    const nameMatch = b.match(/href="\/library\/([^"#?]+)"/);
+    if (!nameMatch) continue;
+    const name = nameMatch[1];
+    const description = firstGroup(b, /<p[^>]*class="[^"]*max-w-lg[^"]*"[^>]*>([\s\S]*?)<\/p>/);
+    const capabilities = [...b.matchAll(/<span[^>]*bg-indigo-50[^>]*>([\s\S]*?)<\/span>/g)]
+      .map((m) => stripTags(m[1]))
+      .filter(Boolean);
+    const sizes = [...b.matchAll(/<span[^>]*bg-\[#ddf4ff\][^>]*>([\s\S]*?)<\/span>/g)]
+      .map((m) => stripTags(m[1]))
+      .filter(Boolean);
+    // "<span >118M</span> <span ...>&nbsp;Pulls</span>" — take the value that
+    // precedes the Pulls label, not the first span in the metadata block.
+    const pulls = firstGroup(b, /<span[^>]*>([^<]*?)<\/span>\s*<span[^>]*>(?:&nbsp;|\s)*Pulls</);
+    const updated = firstGroup(b, /<span[^>]*>([^<]*?\bago)\s*<\/span>/);
+    out.push({ name, description, capabilities, sizes, pulls, updated });
+  }
+  return out;
+}
+
+/**
+ * Parse the library HTML into entries. Tries the `x-test-*` anchors first and
+ * falls back to structural parsing, so an upstream markup change in either
+ * direction degrades to the other rather than to an empty catalog.
+ */
+export function parseLibrary(html: string): LibEntry[] {
+  const byAnchors = parseByTestAnchors(html);
+  if (byAnchors.length >= MIN_PLAUSIBLE) return byAnchors;
+  const byStructure = parseByStructure(html);
+  return byStructure.length >= byAnchors.length ? byStructure : byAnchors;
 }
 
 async function scrape(): Promise<Index> {
@@ -102,10 +149,18 @@ async function refresh(): Promise<Index> {
   return refreshing;
 }
 
-/** Get the index, honoring TTL + stale-while-revalidate. `force` re-scrapes now. */
+/**
+ * Get the index, honoring TTL + stale-while-revalidate. `force` re-scrapes now
+ * and *propagates* a scrape failure: the caller explicitly asked for fresh data,
+ * so swallowing the error here would report success while serving the stale
+ * catalog — which is exactly how a broken scrape stayed invisible for weeks.
+ * Non-forced reads still degrade quietly, since a page render should never fail
+ * just because ollama.com is unreachable.
+ */
 export async function getIndex(opts?: { force?: boolean }): Promise<Index> {
   const force = opts?.force ?? false;
-  if (force || !cache) {
+  if (force) return refresh();
+  if (!cache) {
     try {
       return await refresh();
     } catch {
