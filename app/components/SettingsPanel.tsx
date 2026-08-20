@@ -25,16 +25,23 @@ export function SettingsPanel({
   onClose,
   showNvidiaLogo,
   onShowNvidiaLogoChange,
+  initialSection,
 }: {
   open: boolean;
   onClose: () => void;
   showNvidiaLogo: boolean;
   onShowNvidiaLogoChange: (value: boolean) => void;
+  /** Section to land on when opened via a deep link (`cortex:open-settings`). */
+  initialSection?: string;
 }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
-  const [active, setActive] = useState<SectionId>("theme");
+  // Seeded from the deep link. Header re-keys this component when the link
+  // changes, so a fresh mount re-seeds it — no effect syncing prop → state.
+  const [active, setActive] = useState<SectionId>(
+    SECTIONS.some((s) => s.id === initialSection) ? (initialSection as SectionId) : "theme",
+  );
 
   const [presets, setPresets] = useState<Preset[]>([]);
   const [activeThemeId, setActiveThemeId] = useState<string | null>(null);

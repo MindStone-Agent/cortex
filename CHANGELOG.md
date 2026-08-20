@@ -12,6 +12,39 @@ clean install point and its notes live here.
 Tracked toward **v1.0** (see the [v1.0 milestone](https://github.com/MindStone-Agent/cortex/milestone/1)):
 a verified clean install on a stock DGX Spark and a demo + landing pitch.
 
+## [0.8.0] — 2026-08-19
+
+### Added
+- **Ollama Cloud variants on the Models page** (#41). Cloud-capable models now carry a `cloud`
+  badge, and their Pull dropdown lists the model's actual cloud tags (`gpt-oss:20b-cloud`,
+  `gemma4:cloud`, …) alongside the local sizes. Selecting one pulls the small cloud pointer
+  through the existing pull path — no weights, no progress bar, done in about a second.
+  - Discovery is two scrapes, because the library index carries no cloud tags at all:
+    `ollama.com/search?c=cloud` gives the cloud-capable set (cached 24h, used to badge cards),
+    and `ollama.com/library/<name>/tags` is fetched **lazily** — only for models already known
+    to be cloud-capable, only when the dropdown opens. Both degrade to "no cloud pills" rather
+    than failing search or the dropdown.
+- **A deep link into a settings section.** Any component can dispatch
+  `cortex:open-settings` with a section id; the header opens the panel there. Used by the
+  cloud-pull gate to point at Settings → Ollama.
+
+### Fixed
+- **Settings → Ollama reported "Signed in" when cloud models could not run.** The panel derived
+  that label from *whether an `OLLAMA_API_KEY` was set*, resolving it against `ollama.com/api/me`.
+  But cloud **inference** authenticates with a **device signin key** (`ollama signin`), which is a
+  different credential — so a box with a valid API key showed a green "Signed in · account" while
+  every cloud run failed with "You need to be signed in". Cost roughly a day of debugging on a DGX
+  Spark on 2026-08-17. Cloud state now comes from the local Ollama server's own device-key
+  identity (`POST /api/me`), and the panel distinguishes "signed in", "not signed in — cloud models
+  will not run" (with a pointer to `ollama signin`), and "Ollama unreachable". The API key is still
+  offered, now labelled for what it actually does.
+- **Cloud pulls are gated on that same real check**, so a cloud variant can't be installed on a box
+  that would fail to run it — the pills disable with a link to the sign-in settings instead.
+- **Cloud-native models offered an unpullable `latest` pill.** `deepseek-v4-flash` and
+  `deepseek-v4-pro` publish *only* cloud tags — `deepseek-v4-flash:latest` is a 404 — but the
+  variant list added `latest` unconditionally. It is now dropped for models whose tags page shows
+  no `latest`, and left untouched whenever that is unknown.
+
 ## [0.7.1] — 2026-08-03
 
 ### Fixed
@@ -161,7 +194,8 @@ a verified clean install on a stock DGX Spark and a demo + landing pitch.
 - Open WebUI reconfigure script (`:ollama` → `:main` image, preserves the data
   volume, fixes the SSRF guard for private-LAN image URLs).
 
-[Unreleased]: https://github.com/MindStone-Agent/cortex/compare/v0.7.1...HEAD
+[Unreleased]: https://github.com/MindStone-Agent/cortex/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/MindStone-Agent/cortex/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/MindStone-Agent/cortex/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/MindStone-Agent/cortex/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/MindStone-Agent/cortex/compare/v0.5.0...v0.6.0

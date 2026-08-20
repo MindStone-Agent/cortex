@@ -5,6 +5,7 @@
 // scrape fails. See MindStone-Agent/cortex#23.
 
 import type { BrowseModel, ModelVariant } from "./modelTypes";
+import { getCloudModels } from "./ollamaCloud";
 
 const LIBRARY_URL = "https://ollama.com/library";
 const TTL_MS = 24 * 60 * 60 * 1000; // 24h
@@ -189,7 +190,9 @@ export async function searchOllama(
   syncedAt: number;
   source: "scrape" | "fallback";
 }> {
-  const idx = await getIndex();
+  // Cloud membership only badges the card; a failed cloud lookup degrades to an
+  // empty set and must never fail the search itself.
+  const [idx, cloud] = await Promise.all([getIndex(), getCloudModels()]);
   const query = q.trim().toLowerCase();
   let entries = idx.entries;
   if (query) {
@@ -211,6 +214,7 @@ export async function searchOllama(
     sizes: e.sizes,
     pulls: e.pulls,
     updated: e.updated,
+    cloud: cloud.names.has(e.name),
     url: `https://ollama.com/library/${e.name}`,
   }));
   return { results, total, hasMore: start + PAGE_SIZE < total, syncedAt: idx.syncedAt, source: idx.source };

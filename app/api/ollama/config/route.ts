@@ -3,7 +3,7 @@
 // applying them restarts Ollama via a root-owned NO-ARG wrapper so nothing
 // user-controlled reaches root. Gated behind system.ollamaConfig (opt-in).
 //
-//   GET  → current values + cloud account + whether apply is wired up
+//   GET  → current values + real cloud-run auth state + whether apply is wired up
 //   POST { apiKey?, contextLength?, keepAlive?, restart? }
 //          (null clears a field; undefined leaves it; restart applies via wrapper)
 
@@ -13,6 +13,7 @@ import { promisify } from "node:util";
 import { existsSync } from "node:fs";
 import { getSystemConfig } from "@/app/lib/config";
 import { readOllamaEnv, writeOllamaEnv, type OllamaEnv } from "@/app/lib/ollamaEnv";
+import { getCloudAuth, invalidateCloudAuth } from "@/app/lib/ollamaCloud";
 
 const execAsync = promisify(exec);
 
@@ -34,34 +35,21 @@ async function ollamaVersion(): Promise<string | null> {
   }
 }
 
-// Best-effort: resolve a cloud API key to an account label. Degrades silently if
-// the endpoint shape changes or the network is unavailable — purely cosmetic.
-async function cloudAccount(apiKey: string): Promise<string | null> {
-  try {
-    const res = await fetch("https://ollama.com/api/me", {
-      headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/json" },
-      cache: "no-store",
-      signal: AbortSignal.timeout(6000),
-    });
-    if (!res.ok) return null;
-    const j = (await res.json()) as { name?: string; username?: string; email?: string };
-    return j.name || j.username || j.email || "authenticated";
-  } catch {
-    return null;
-  }
-}
-
 export async function GET() {
   const sys = getSystemConfig();
   const env = readOllamaEnv();
-  const [version, account] = await Promise.all([
-    ollamaVersion(),
-    env.apiKey ? cloudAccount(env.apiKey) : Promise.resolve(null),
-  ]);
+  // The account label comes from the *device* key the Ollama server actually
+  // holds, not from the API key. Resolving the API key against ollama.com used
+  // to produce this label, which reported "Signed in" on boxes where every
+  // cloud run failed — the API key and the signin key are different credentials.
+  const [version, cloud] = await Promise.all([ollamaVersion(), getCloudAuth({ force: true })]);
   return NextResponse.json({
     version,
     apiKeySet: Boolean(env.apiKey),
-    account,
+    account: cloud.account ?? null,
+    cloudSignedIn: cloud.signedIn,
+    cloudPlan: cloud.plan ?? null,
+    cloudUnreachable: Boolean(cloud.unreachable),
     contextLength: env.contextLength ?? null,
     keepAlive: env.keepAlive ?? null,
     systemActionsEnabled: sys.ollamaConfig,
@@ -164,6 +152,8 @@ export async function POST(req: Request) {
     try {
       await execAsync(`sudo -n ${RESTART_WRAPPER}`, { timeout: 60_000 });
       restarted = true;
+      // A restarted server re-reads its credentials — don't serve a stale verdict.
+      invalidateCloudAuth();
     } catch (e) {
       const err = e as { stderr?: string; message?: string };
       return NextResponse.json(

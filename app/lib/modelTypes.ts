@@ -22,6 +22,8 @@ export type BrowseModel = {
   likes?: number;
   /** ollama "1 year ago" */
   updated?: string;
+  /** ollama: model has at least one Ollama Cloud variant */
+  cloud?: boolean;
   /** canonical web page for the model */
   url: string;
 };
@@ -41,20 +43,40 @@ export type SearchResponse = {
   error?: string;
 };
 
+/**
+ * Whether this box can actually run Ollama Cloud models. Derived from the local
+ * Ollama server's registered *device* key (`POST /api/me`) — NOT from whether an
+ * OLLAMA_API_KEY is set, which proves registry access but not inference access.
+ * See app/lib/ollamaCloud.ts.
+ */
+export type CloudAuth = {
+  signedIn: boolean;
+  /** Account label (email preferred) when signed in. */
+  account?: string;
+  /** Ollama plan tier, when reported. */
+  plan?: string;
+  /** The local Ollama server could not be reached at all. */
+  unreachable?: boolean;
+};
+
 /** A concrete pullable variant of a model. */
 export type ModelVariant = {
   /** full ollama pull ref: "llama3.1:8b" | "hf.co/owner/repo:Q4_K_M" */
   ref: string;
-  /** "8b" | "latest" | "Q4_K_M" */
+  /** "8b" | "latest" | "Q4_K_M" | "cloud" | "120b-cloud" */
   label: string;
   /** optional extra detail (e.g. source filename) */
   detail?: string;
+  /** Ollama Cloud variant: installs a pointer, runs remotely, needs cloud auth. */
+  cloud?: boolean;
 };
 
 export type DetailResponse = {
   source: ModelSource;
   id: string;
   variants: ModelVariant[];
+  /** Present when the response includes cloud variants — gates the cloud pills. */
+  cloudAuth?: CloudAuth;
   error?: string;
 };
 
