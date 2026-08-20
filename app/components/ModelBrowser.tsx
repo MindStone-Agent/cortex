@@ -3,12 +3,36 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   BrowseModel,
+  CloudAuth,
   DetailResponse,
   ModelSource,
   ModelVariant,
   PullProgress,
   SearchResponse,
 } from "../lib/modelTypes";
+
+/** Ask the header to open Settings → Ollama (the panel owns its own state). */
+const openOllamaSettings = () =>
+  window.dispatchEvent(new CustomEvent("cortex:open-settings", { detail: { section: "ollama" } }));
+
+function CloudIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      width="11"
+      height="11"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <path d="M17.5 19a4.5 4.5 0 0 0 .5-8.97A6 6 0 0 0 6.34 8.5 4.5 4.5 0 0 0 6.5 19z" />
+    </svg>
+  );
+}
 
 const fmtNum = (n: number) =>
   n >= 1e6 ? (n / 1e6).toFixed(1) + "M" : n >= 1e3 ? (n / 1e3).toFixed(1) + "K" : String(n);
@@ -25,6 +49,9 @@ function ago(ms: number): string {
 
 const vkey = (source: ModelSource, id: string) => `${source}:${id}`;
 
+/** Cloud tags are the bare `cloud` or size-qualified `<size>-cloud`. */
+const isCloudRef = (ref: string) => /(^|-)cloud$/i.test(ref.split(":").pop() ?? "");
+
 type PullState = {
   ref: string;
   status: string;
@@ -34,6 +61,8 @@ type PullState = {
   /** The model-card key this pull was started from (for inline disable state).
    *  Undefined for pulls reattached on mount (we only know the ref then). */
   cardKey?: string;
+  /** Cloud pointer: finishes near-instantly, so it gets no progress bar. */
+  cloud?: boolean;
 };
 
 export function ModelBrowser() {
@@ -47,6 +76,8 @@ export function ModelBrowser() {
   const [installed, setInstalled] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<string | null>(null);
   const [variants, setVariants] = useState<Record<string, ModelVariant[] | "loading" | "error">>({});
+  // Box-wide, so it is learned from whichever card first reports cloud variants.
+  const [cloudAuth, setCloudAuth] = useState<CloudAuth | null>(null);
   // Keyed by pull ref. Multiple concurrent downloads, and they survive navigation:
   // the server owns each pull, and we reattach to in-flight ones on mount.
   const [pulls, setPulls] = useState<Record<string, PullState>>({});
@@ -161,6 +192,7 @@ export function ModelBrowser() {
         try {
           const res = await fetch(`/api/models/detail?source=${m.source}&id=${encodeURIComponent(m.id)}`);
           const j = (await res.json()) as DetailResponse;
+          if (j.cloudAuth) setCloudAuth(j.cloudAuth);
           setVariants((v) => ({ ...v, [k]: j.variants.length ? j.variants : "error" }));
         } catch {
           setVariants((v) => ({ ...v, [k]: "error" }));
@@ -184,12 +216,12 @@ export function ModelBrowser() {
   const attached = useRef<Set<string>>(new Set());
 
   const attachPull = useCallback(
-    async (ref: string, cardKey?: string) => {
+    async (ref: string, cardKey?: string, cloud?: boolean) => {
       if (attached.current.has(ref)) return;
       attached.current.add(ref);
       setPulls((prev) => ({
         ...prev,
-        [ref]: { ref, status: "starting…", pct: prev[ref]?.pct ?? null, cardKey },
+        [ref]: { ref, status: "starting…", pct: prev[ref]?.pct ?? null, cardKey, cloud },
       }));
       try {
         const res = await fetch("/api/models/pull", {
@@ -218,7 +250,7 @@ export function ModelBrowser() {
             }
             const isDone = obj.done || obj.status === "success";
             setPulls((prev) => {
-              const cur = prev[ref] ?? { ref, status: "", pct: null, cardKey };
+              const cur = prev[ref] ?? { ref, status: "", pct: null, cardKey, cloud };
               if (obj.error) {
                 return { ...prev, [ref]: { ...cur, status: obj.error, pct: null, error: true, done: true } };
               }
@@ -230,7 +262,7 @@ export function ModelBrowser() {
                 ...prev,
                 [ref]: {
                   ...cur,
-                  status: isDone ? "installed ✓" : obj.status ?? "…",
+                  status: isDone ? (cur.cloud ? "enabled ✓" : "installed ✓") : obj.status ?? "…",
                   pct: isDone ? 100 : pct,
                   done: isDone,
                 },
@@ -260,7 +292,7 @@ export function ModelBrowser() {
 
   const startPull = useCallback(
     (m: BrowseModel, variant: ModelVariant) => {
-      void attachPull(variant.ref, vkey(m.source, m.id));
+      void attachPull(variant.ref, vkey(m.source, m.id), variant.cloud);
     },
     [attachPull],
   );
@@ -275,7 +307,8 @@ export function ModelBrowser() {
         const j = (await res.json()) as { pulls?: { ref: string; done?: boolean }[] };
         if (cancelled) return;
         for (const p of j.pulls ?? []) {
-          if (!p.done) void attachPull(p.ref);
+          // Reattached pulls carry no variant metadata — recover cloud-ness from the ref.
+          if (!p.done) void attachPull(p.ref, undefined, isCloudRef(p.ref));
         }
       } catch {
         /* non-fatal */
@@ -381,7 +414,7 @@ export function ModelBrowser() {
                   )}
                 </span>
               </div>
-              {!p.error && (
+              {!p.error && !p.cloud && (
                 <div className="h-1 rounded-full bg-ink-800 overflow-hidden">
                   <div
                     className="h-full bg-gold-500 transition-all"
@@ -446,6 +479,15 @@ export function ModelBrowser() {
                         {c}
                       </span>
                     ))}
+                    {m.cloud && (
+                      <span
+                        title="Has an Ollama Cloud variant — runs remotely, no local weights"
+                        className="inline-flex items-center gap-0.5 uppercase tracking-wider text-sky-400 border border-sky-400/30 rounded px-1 py-px"
+                      >
+                        <CloudIcon />
+                        cloud
+                      </span>
+                    )}
                     {m.sizes.slice(0, 6).map((s) => (
                       <span key={s} className="text-ink-500 border border-ink-800 rounded px-1 py-px">
                         {s}
@@ -483,19 +525,59 @@ export function ModelBrowser() {
                       ) : vlist === "error" ? (
                         <p className="text-xs text-error py-1">No pullable variants found.</p>
                       ) : (
-                        <div className="flex flex-wrap gap-1.5 py-1">
-                          {vlist.map((v) => (
-                            <button
-                              key={v.ref}
-                              onClick={() => startPull(m, v)}
-                              disabled={!!pulls[v.ref] && !pulls[v.ref]?.done}
-                              title={v.detail ?? v.ref}
-                              className="text-[11px] font-mono px-2 py-1 rounded-md border border-ink-700 text-ink-200 hover:border-gold-500/50 hover:text-gold-500 disabled:opacity-40 transition-colors"
-                            >
-                              {v.label}
-                            </button>
-                          ))}
-                        </div>
+                        (() => {
+                          // Cloud variants need a registered device key to actually run,
+                          // so gate them here rather than letting the pull succeed and
+                          // every inference fail afterwards.
+                          const hasCloud = vlist.some((v) => v.cloud);
+                          const cloudBlocked = hasCloud && cloudAuth !== null && !cloudAuth.signedIn;
+                          return (
+                            <>
+                              <div className="flex flex-wrap gap-1.5 py-1">
+                                {vlist.map((v) => {
+                                  const busy = !!pulls[v.ref] && !pulls[v.ref]?.done;
+                                  const blocked = !!v.cloud && cloudBlocked;
+                                  return (
+                                    <button
+                                      key={v.ref}
+                                      onClick={() => startPull(m, v)}
+                                      disabled={busy || blocked}
+                                      title={
+                                        blocked
+                                          ? "Sign in to Ollama Cloud to use cloud models"
+                                          : v.detail ?? v.ref
+                                      }
+                                      className={
+                                        "inline-flex items-center gap-1 text-[11px] font-mono px-2 py-1 rounded-md border disabled:opacity-40 transition-colors " +
+                                        (v.cloud
+                                          ? "border-sky-400/40 text-sky-300 hover:border-sky-400 hover:text-sky-200 disabled:hover:border-sky-400/40"
+                                          : "border-ink-700 text-ink-200 hover:border-gold-500/50 hover:text-gold-500")
+                                      }
+                                    >
+                                      {v.cloud && <CloudIcon />}
+                                      {v.label}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                              {cloudBlocked && (
+                                <p className="text-[11px] text-amber-400 leading-snug pb-1">
+                                  {cloudAuth?.unreachable
+                                    ? "Ollama is unreachable — cloud variants are unavailable."
+                                    : "Cloud models need an Ollama Cloud sign-in on this box. "}
+                                  {!cloudAuth?.unreachable && (
+                                    <button
+                                      onClick={openOllamaSettings}
+                                      className="underline underline-offset-2 hover:text-amber-300"
+                                    >
+                                      Open Ollama settings →
+                                    </button>
+                                  )}
+                                </p>
+                              )}
+                            </>
+                          );
+                        })()
                       )}
                     </div>
                   )}

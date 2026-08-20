@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Brand } from "../lib/theme";
 import { SettingsPanel } from "./SettingsPanel";
 
@@ -16,6 +16,18 @@ const navItems = [
 export function Header({ hostname, brand }: { hostname: string; brand: Brand }) {
   const pathname = usePathname();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsSection, setSettingsSection] = useState<string | undefined>();
+
+  // Anywhere in the app can deep-link into a settings section without threading
+  // props through the tree — e.g. the Models page pointing at Ollama sign-in.
+  useEffect(() => {
+    const onOpen = (e: Event) => {
+      setSettingsSection((e as CustomEvent<{ section?: string }>).detail?.section);
+      setSettingsOpen(true);
+    };
+    window.addEventListener("cortex:open-settings", onOpen);
+    return () => window.removeEventListener("cortex:open-settings", onOpen);
+  }, []);
   // Drive the NVIDIA logo from client state so the toggle hides it instantly;
   // the server prop (brand) seeds it and persistence is handled in the panel.
   const [showNvidiaLogo, setShowNvidiaLogo] = useState(brand.showNvidiaLogo);
@@ -91,8 +103,16 @@ export function Header({ hostname, brand }: { hostname: string; brand: Brand }) 
         </div>
       </div>
       <SettingsPanel
+        // Remount when the deep-linked section changes so the panel re-seeds
+        // which section is active without a prop→state sync effect.
+        key={settingsSection ?? "default"}
         open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
+        initialSection={settingsSection}
+        onClose={() => {
+          setSettingsOpen(false);
+          // Otherwise the next gear-click would land on the deep-linked section.
+          setSettingsSection(undefined);
+        }}
         showNvidiaLogo={showNvidiaLogo}
         onShowNvidiaLogoChange={setShowNvidiaLogo}
       />

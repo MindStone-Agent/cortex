@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ollamaVariants } from "@/app/lib/ollamaLibrary";
+import { cloudInfo, getCloudAuth } from "@/app/lib/ollamaCloud";
 import { hfVariants } from "@/app/lib/huggingface";
 import type { DetailResponse } from "@/app/lib/modelTypes";
 
@@ -14,8 +15,24 @@ export async function GET(req: Request) {
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
 
   try {
-    const variants = source === "hf" ? await hfVariants(id) : await ollamaVariants(id);
-    const body: DetailResponse = { source, id, variants };
+    if (source === "hf") {
+      const body: DetailResponse = { source, id, variants: await hfVariants(id) };
+      return NextResponse.json(body);
+    }
+
+    // Local sizes come from the cached library index; cloud tags are scraped
+    // lazily and only for models already known to be cloud-capable.
+    const [local, cloud] = await Promise.all([ollamaVariants(id), cloudInfo(id)]);
+    // Cloud-native models publish no `latest`, which the index can't tell us —
+    // drop the pill rather than offer a pull that 404s. Only when we actually
+    // know (hasLatest === false); an unknown leaves the list untouched.
+    const localVariants =
+      cloud.hasLatest === false ? local.filter((v) => v.ref !== id) : local;
+
+    const body: DetailResponse = { source, id, variants: [...localVariants, ...cloud.variants] };
+    // Only report auth when there is something for it to gate, so the common
+    // (non-cloud) card costs no extra call.
+    if (cloud.variants.length) body.cloudAuth = await getCloudAuth();
     return NextResponse.json(body);
   } catch (e) {
     const body: DetailResponse = {

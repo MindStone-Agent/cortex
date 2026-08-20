@@ -6,6 +6,10 @@ type Status = {
   version: string | null;
   apiKeySet: boolean;
   account: string | null;
+  /** True only when the server holds a registered *device* key (`ollama signin`). */
+  cloudSignedIn: boolean;
+  cloudPlan: string | null;
+  cloudUnreachable: boolean;
   contextLength: number | null;
   keepAlive: string | null;
   systemActionsEnabled: boolean;
@@ -111,43 +115,68 @@ export function OllamaSettings() {
         <label className="block text-[11px] uppercase tracking-wider text-ink-500 mb-1">
           Ollama Cloud
         </label>
-        {status.apiKeySet ? (
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-sm text-ink-200 min-w-0 truncate">
+        {/* Cloud-RUN state, from the server's registered device key. This is the
+            signal that actually predicts whether a cloud model will answer. */}
+        <div className="text-sm min-w-0">
+          {status.cloudSignedIn ? (
+            <span className="text-ink-200 truncate">
               Signed in
-              {status.account ? (
+              {status.account && (
                 <>
                   {" · "}
                   <span className="text-nvgreen-500 font-mono">{status.account}</span>
                 </>
-              ) : (
-                <span className="text-ink-500"> · API key set</span>
               )}
+              {status.cloudPlan && <span className="text-ink-500"> · {status.cloudPlan}</span>}
             </span>
-            <button
-              type="button"
-              onClick={() => save({ apiKey: null }, "Signed out")}
-              disabled={busy || !enabled}
-              className="shrink-0 rounded border border-error/40 text-error hover:bg-error/10 px-2 py-1 text-[11px] uppercase tracking-wider font-mono transition disabled:opacity-40"
-            >
-              {busy ? "…" : "Sign out"}
-            </button>
-          </div>
-        ) : (
-          <input
-            type="password"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            placeholder="ollama.com API key (paste to sign in)"
-            autoComplete="off"
-            spellCheck={false}
-            disabled={!enabled}
-            className={fieldCls}
-          />
+          ) : status.cloudUnreachable ? (
+            <span className="text-ink-400">Ollama unreachable — cloud state unknown.</span>
+          ) : (
+            <span className="text-amber-400">Not signed in — cloud models will not run.</span>
+          )}
+        </div>
+
+        {!status.cloudSignedIn && !status.cloudUnreachable && (
+          <p className="text-[11px] text-ink-500 mt-1 leading-snug rounded border border-amber-400/30 bg-amber-400/5 p-2">
+            Cloud models authenticate with a <strong className="text-ink-300">device key</strong>,
+            not the API key below. Run <span className="font-mono">ollama signin</span> on the host
+            (as the user the Ollama service runs as) to register one.
+          </p>
         )}
+
+        {/* API key — a separate credential: registry/API access, not inference. */}
+        <div className="mt-2">
+          {status.apiKeySet ? (
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[11px] font-mono text-ink-400 min-w-0 truncate">
+                API key set
+              </span>
+              <button
+                type="button"
+                onClick={() => save({ apiKey: null }, "API key cleared")}
+                disabled={busy || !enabled}
+                className="shrink-0 rounded border border-error/40 text-error hover:bg-error/10 px-2 py-1 text-[11px] uppercase tracking-wider font-mono transition disabled:opacity-40"
+              >
+                {busy ? "…" : "Clear key"}
+              </button>
+            </div>
+          ) : (
+            <input
+              type="password"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder="ollama.com API key (optional)"
+              autoComplete="off"
+              spellCheck={false}
+              disabled={!enabled}
+              className={fieldCls}
+            />
+          )}
+        </div>
         <p className="text-[11px] text-ink-500 mt-1 leading-snug">
-          Authenticates cloud models. Stored in Ollama&apos;s service env; takes effect on restart.
-          Native <span className="font-mono">ollama signin</span> still works on the CLI.
+          The API key authorises registry calls and is stored in Ollama&apos;s service env (applies
+          on restart). It does <strong className="text-ink-400">not</strong> by itself enable cloud
+          model runs — that needs <span className="font-mono">ollama signin</span>.
         </p>
       </div>
 

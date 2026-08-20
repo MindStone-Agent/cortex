@@ -67,8 +67,11 @@ health check and a direct link. Edit the catalog in `cortex-config.json`, or let
   newly-announced Ollama models immediately, then **pull** a chosen model or size straight to
   your local Ollama with **live download progress**. Downloads are **server-tracked**, so they
   keep running and **reattach** if you navigate away. Optionally add a **Hugging Face token**
-  (Settings → Integrations) to reach gated/private GGUF repos. Discovery only — your installed
-  inventory stays on the dashboard.
+  (Settings → Integrations) to reach gated/private GGUF repos. Models with an **Ollama Cloud**
+  variant are badged, and their cloud tags (`gpt-oss:20b-cloud`, `gemma4:cloud`, …) appear as
+  extra pull options — installing one fetches a small pointer instead of weights, so inference
+  runs on Ollama Cloud. Cloud options are gated on this box actually being signed in to Ollama
+  Cloud. Discovery only — your installed inventory stays on the dashboard.
 - **Services catalog** — a configurable grid of the tools you run, each with a live health
   check. **Auto-discovery** (`/api/discover`) probes localhost for common AI-tool ports.
 - **Settings** — a tabbed modal (Theme · Branding · Ollama · Integrations · Tools · Remote
@@ -102,6 +105,7 @@ Active development — **v0.6**.
 | Live performance telemetry over SSE | ✅ |
 | Models view (Ollama) + context window | ✅ |
 | Model discovery + pull — Ollama library + Hugging Face | ✅ |
+| Ollama Cloud variants — badged, pullable, auth-gated | ✅ |
 | Model lifecycle controls — load / unload / remove | ✅ |
 | Resilient downloads — server-tracked, reattach on return | ✅ |
 | Hugging Face token — gated / private repos (opt-in) | ✅ |
