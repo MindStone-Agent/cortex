@@ -65,10 +65,29 @@ export type Integrations = {
   huggingface?: { token?: string; user?: string };
 };
 
+/**
+ * An Ollama that runs inside a container with no host port (e.g. an app's own
+ * contained model server on an internal Docker network). Cortex can't reach it over
+ * HTTP, so scripts/cortex-contained-ollama.py (a separate user service) reads it with
+ * `docker exec <container> ollama ps|list` and writes a snapshot file that Cortex only
+ * reads. The web process never talks to Docker.
+ */
+export type ContainedOllama = {
+  /** Snapshot file name: lowercase letters, digits and dashes. */
+  id: string;
+  /** Heading shown on the dashboard, e.g. "net-arbiter". */
+  label: string;
+  /** Docker container name to read. */
+  container: string;
+  /** Optional one-line note shown under the heading. */
+  note?: string;
+};
+
 export type CortexConfig = {
   services: Service[];
   system?: SystemConfig;
   integrations?: Integrations;
+  containedOllama?: ContainedOllama[];
 };
 
 /**
@@ -101,6 +120,22 @@ export function loadConfig(): CortexConfig {
 
 export function getServices(): Service[] {
   return loadConfig().services ?? [];
+}
+
+const CONTAINED_ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
+const CONTAINER_NAME = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$/;
+
+/** Contained Ollama runtimes to show (validated; invalid entries are dropped). */
+export function getContainedOllama(): ContainedOllama[] {
+  const list = loadConfig().containedOllama;
+  if (!Array.isArray(list)) return [];
+  return list.filter(
+    (c): c is ContainedOllama =>
+      !!c &&
+      typeof c.id === "string" && CONTAINED_ID.test(c.id) &&
+      typeof c.container === "string" && CONTAINER_NAME.test(c.container) &&
+      typeof c.label === "string" && c.label.length > 0 && c.label.length <= 80,
+  );
 }
 
 /** System-action config (privileged UI actions). All flags default OFF. */

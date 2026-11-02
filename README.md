@@ -194,6 +194,27 @@ public-only search.
 or **remove** a model (Ollama's HTTP API only — no privileged access). Pulls are tracked
 server-side, so a download keeps running and reattaches if you leave and return to the Models page.
 
+### Contained Ollama runtimes (opt-in)
+
+Some apps run their own Ollama inside a container with **no host port** (for example on an
+internal Docker network, so the models can't reach the network). Cortex can't reach those over
+HTTP, so their loaded models don't show in the inventory. To show them, list each one in
+`cortex-config.json`:
+
+```json
+"containedOllama": [
+  { "id": "net-arbiter", "label": "net-arbiter", "container": "netarb-ollama",
+    "note": "net-arbiter's own model server: internal network only, no port, no internet." }
+]
+```
+
+then run **[`scripts/enable-contained-ollama.sh`](scripts/enable-contained-ollama.sh)**. It installs
+a systemd user service that reads each container with `docker exec <container> ollama ps|list`
+every few seconds and writes a snapshot to `~/.cache/cortex/contained/`. The dashboard's Models card
+then shows each runtime as its own section (read-only: the owning app manages its models). The
+Cortex user must be in the `docker` group; the **web process itself never talks to Docker**, it only
+reads the snapshot files. A section marked **stale** means the collector isn't running.
+
 ### Ollama updates from the dashboard (opt-in)
 
 The dashboard shows the installed Ollama version and flags when a newer release is
@@ -313,6 +334,9 @@ hardening steps.
   UI-driven Ollama **settings** (cloud key / context / keep-alive): adds an EnvironmentFile
   drop-in + a no-arg `systemctl restart ollama` wrapper ([`scripts/cortex-ollama-restart.sh`](scripts/cortex-ollama-restart.sh))
   + sudoers; see *Ollama server settings* above.
+- **[`scripts/enable-contained-ollama.sh`](scripts/enable-contained-ollama.sh)** — opt in to showing
+  contained Ollama runtimes (installs the `docker exec` collector as a user service); see
+  *Contained Ollama runtimes* above.
 - **[`scripts/cortex-self-update.sh`](scripts/cortex-self-update.sh)** — the self-update
   routine the dashboard runs (git pull + build + detached restart, as the web user, no root);
   see *Cortex self-update* above.
