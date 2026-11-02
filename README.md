@@ -203,8 +203,8 @@ HTTP, so their loaded models don't show in the inventory. To show them, list eac
 
 ```json
 "containedOllama": [
-  { "id": "net-arbiter", "label": "net-arbiter", "container": "netarb-ollama",
-    "note": "net-arbiter's own model server: internal network only, no port, no internet." }
+  { "id": "my-app", "label": "my-app", "container": "my-app-ollama",
+    "note": "my-app's own model server: internal network only, no port, no internet." }
 ]
 ```
 
