@@ -12,6 +12,11 @@ those files; it never talks to Docker.
 Nothing user-controlled reaches a shell: container names come from cortex-config.json,
 are validated, and are passed as an argv list.
 
+A configured container that doesn't exist on this box (Docker answered, and it isn't listed) is
+written as present=false, and the dashboard hides it, so one config can ship to boxes with and
+without the app. If Docker itself can't be asked (daemon down, no access), every runtime shows that
+error instead: a broken instrument never reads as "not installed".
+
 Usage: cortex-contained-ollama.py [--once]
 """
 import json
@@ -63,6 +68,22 @@ def parse_table(text):
     return rows
 
 
+def container_states():
+    """{name: state} for every container on this box. Raises if Docker can't be asked, so a
+    broken Docker (daemon down, lost group) shows as an error, never as "not installed"."""
+    r = subprocess.run(["docker", "ps", "-a", "--format", "{{.Names}}\t{{.State}}"],
+                       capture_output=True, text=True, timeout=10)
+    if r.returncode != 0:
+        msg = (r.stderr or r.stdout or "").strip().splitlines()
+        raise RuntimeError((msg[0] if msg else f"docker ps exit {r.returncode}")[:200])
+    states = {}
+    for line in r.stdout.splitlines():
+        name, _, state = line.partition("\t")
+        if name:
+            states[name] = state.strip()
+    return states
+
+
 def ollama(container, *args):
     r = subprocess.run(["docker", "exec", container, "ollama", *args],
                        capture_output=True, text=True, timeout=10)
@@ -85,9 +106,23 @@ def main():
     models, listed_at = {}, {}
     while True:
         now = time.time()
+        try:
+            states, docker_error = container_states(), None
+        except (RuntimeError, subprocess.TimeoutExpired, OSError) as e:
+            states, docker_error = None, str(e)[:200] or type(e).__name__
         for t in targets():
-            snap = {**t, "checkedAt": now, "ok": True, "error": None, "loaded": [], "models": models.get(t["id"], [])}
+            snap = {**t, "checkedAt": now, "present": True, "ok": True, "error": None, "loaded": [],
+                    "models": models.get(t["id"], [])}
             try:
+                if states is None:
+                    raise RuntimeError(f"cannot list containers: {docker_error}")
+                if t["container"] not in states:
+                    # Not installed on this box (Docker answered, and it isn't there): hidden.
+                    snap.update(present=False, ok=False, models=[])
+                    write(snap)
+                    continue
+                if states[t["container"]] != "running":
+                    raise RuntimeError(f"container {t['container']} is {states[t['container']] or 'not running'}")
                 snap["loaded"] = [
                     {"name": r.get("name", ""), "size": r.get("size", ""), "processor": r.get("processor", ""),
                      "context": r.get("context", ""), "until": r.get("until", "")}

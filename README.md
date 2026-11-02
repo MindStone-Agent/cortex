@@ -215,6 +215,11 @@ then shows each runtime as its own section (read-only: the owning app manages it
 Cortex user must be in the `docker` group; the **web process itself never talks to Docker**, it only
 reads the snapshot files. A section marked **stale** means the collector isn't running.
 
+A runtime appears **only on a box where its container exists**: if the container isn't there (the app
+isn't installed), or the collector isn't set up, the section is hidden. If the collector can't reach
+Docker at all, the section stays and shows that error, so a broken box never looks like an empty one. So the same config can ship to
+boxes with and without the app.
+
 ### Ollama updates from the dashboard (opt-in)
 
 The dashboard shows the installed Ollama version and flags when a newer release is
