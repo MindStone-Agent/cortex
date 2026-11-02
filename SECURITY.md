@@ -55,7 +55,15 @@ in `cortex-config.json`:
 user service runs `docker exec <container> ollama ps|list` for the configured containers and writes
 snapshot files that the web process only reads. The web process never runs Docker, and nothing a
 visitor sends reaches the collector. It needs the Cortex user in the `docker` group, which is
-root-equivalent on the host, so keep the Cortex user itself trusted.
+root-equivalent on the host: the collector is trusted code by construction, not sandboxed, so keep
+the Cortex user itself trusted.
+
+**What this discloses, deliberately.** A configured runtime's label, container name, model names,
+loaded state, and (when the collector fails) up to 200 characters of `docker exec` error output are
+shown to anyone who can reach Cortex, like the rest of the dashboard. That is reconnaissance-grade
+metadata, not secrets, and it is **off by default**: the shipped `containedOllama` list is empty, so
+nothing is shown until you name a container. Only configure it on a box where that is acceptable, and
+remove the entry (or stop the `cortex-contained-ollama` service) when the box is no longer needed.
 
 Each is deliberately bounded (a fixed wrapper / a fixed catalog / fixed verbs — never arbitrary
 commands), but once enabled they are reachable **without authentication** by anyone on the

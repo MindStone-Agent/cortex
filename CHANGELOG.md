@@ -25,6 +25,7 @@ a verified clean install on a stock DGX Spark and a demo + landing pitch.
   Models card shows each runtime as its own section, above the host Ollama: loaded models with processor, context and
   keep-alive, then the rest of its inventory, with a live/stale marker. The web process never
   talks to Docker, and container names come only from the config, validated, passed as argv.
+  Off by default (the shipped `containedOllama` list is empty); SECURITY.md names what it discloses.
 - The host Ollama section is headed "Ollama · host" when any contained runtime is configured.
 
 ## [0.8.0] — 2026-08-19
