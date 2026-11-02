@@ -12,6 +12,9 @@ those files; it never talks to Docker.
 Nothing user-controlled reaches a shell: container names come from cortex-config.json,
 are validated, and are passed as an argv list.
 
+A configured container that doesn't exist on this box is written as present=false, and the
+dashboard hides it, so one config can ship to boxes with and without the app.
+
 Usage: cortex-contained-ollama.py [--once]
 """
 import json
@@ -63,6 +66,15 @@ def parse_table(text):
     return rows
 
 
+def running(container):
+    """None if no such container on this box; else whether it's running."""
+    r = subprocess.run(["docker", "inspect", "-f", "{{.State.Running}}", container],
+                       capture_output=True, text=True, timeout=10)
+    if r.returncode != 0:
+        return None
+    return r.stdout.strip() == "true"
+
+
 def ollama(container, *args):
     r = subprocess.run(["docker", "exec", container, "ollama", *args],
                        capture_output=True, text=True, timeout=10)
@@ -86,8 +98,17 @@ def main():
     while True:
         now = time.time()
         for t in targets():
-            snap = {**t, "checkedAt": now, "ok": True, "error": None, "loaded": [], "models": models.get(t["id"], [])}
+            snap = {**t, "checkedAt": now, "present": True, "ok": True, "error": None, "loaded": [],
+                    "models": models.get(t["id"], [])}
             try:
+                state = running(t["container"])
+                if state is None:
+                    # Not installed on this box: the dashboard hides it.
+                    snap.update(present=False, ok=False, models=[])
+                    write(snap)
+                    continue
+                if not state:
+                    raise RuntimeError(f"container {t['container']} is not running")
                 snap["loaded"] = [
                     {"name": r.get("name", ""), "size": r.get("size", ""), "processor": r.get("processor", ""),
                      "context": r.get("context", ""), "until": r.get("until", "")}

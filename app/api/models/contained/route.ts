@@ -15,6 +15,7 @@ const STALE_MS = 15_000;
 
 type Snapshot = {
   checkedAt?: number;
+  present?: boolean;
   ok?: boolean;
   error?: string | null;
   loaded?: { name: string; size: string; processor: string; context: string; until: string }[];
@@ -26,29 +27,32 @@ const str = (v: unknown, max = 120) => (typeof v === "string" ? v.slice(0, max) 
 export async function GET() {
   const dir = process.env.CORTEX_CONTAINED_DIR || path.join(os.homedir(), ".cache", "cortex", "contained");
   const now = Date.now();
-  const runtimes = getContainedOllama().map((c) => {
+  // Shown only when the collector has seen the container on this box: no snapshot (collector not
+  // set up) or present=false (no such container here) means the app isn't installed, so hide it.
+  const runtimes = getContainedOllama().flatMap((c) => {
     let snap: Snapshot | null = null;
     try {
       snap = JSON.parse(fs.readFileSync(path.join(dir, `${c.id}.json`), "utf8")) as Snapshot;
     } catch {
       snap = null;
     }
-    const checkedAt = typeof snap?.checkedAt === "number" ? snap.checkedAt * 1000 : null;
-    return {
+    if (!snap || snap.present === false) return [];
+    const checkedAt = typeof snap.checkedAt === "number" ? snap.checkedAt * 1000 : null;
+    return [{
       id: c.id,
       label: c.label,
       container: c.container,
       note: c.note ?? null,
       checkedAt: checkedAt ? new Date(checkedAt).toISOString() : null,
       stale: checkedAt === null || now - checkedAt > STALE_MS,
-      ok: snap?.ok === true,
-      error: snap ? str(snap.error, 200) || null : "no snapshot yet: is cortex-contained-ollama running?",
-      loaded: (snap?.loaded ?? []).slice(0, 50).map((m) => ({
+      ok: snap.ok === true,
+      error: str(snap.error, 200) || null,
+      loaded: (snap.loaded ?? []).slice(0, 50).map((m) => ({
         name: str(m.name), size: str(m.size, 20), processor: str(m.processor, 30),
         context: str(m.context, 20), until: str(m.until, 40),
       })),
-      models: (snap?.models ?? []).slice(0, 200).map((m) => ({ name: str(m.name), size: str(m.size, 20) })),
-    };
+      models: (snap.models ?? []).slice(0, 200).map((m) => ({ name: str(m.name), size: str(m.size, 20) })),
+    }];
   });
   return NextResponse.json({ runtimes });
 }

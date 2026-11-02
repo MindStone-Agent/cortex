@@ -12,6 +12,14 @@ clean install point and its notes live here.
 Tracked toward **v1.0** (see the [v1.0 milestone](https://github.com/MindStone-Agent/cortex/milestone/1)):
 a verified clean install on a stock DGX Spark and a demo + landing pitch.
 
+## [0.10.0] — 2026-11-02
+
+### Changed
+- **A contained runtime shows only where its container exists.** The collector now checks the
+  container with `docker inspect` first; when it isn't on this box, the runtime is recorded as not
+  present and the Models card hides it, instead of showing an error. With no collector set up, nothing
+  is shown either. A container that exists but is stopped, or whose Ollama fails, still shows **error**.
+
 ## [0.9.1] — 2026-11-02
 
 ### Fixed
@@ -216,7 +224,8 @@ a verified clean install on a stock DGX Spark and a demo + landing pitch.
 - Open WebUI reconfigure script (`:ollama` → `:main` image, preserves the data
   volume, fixes the SSRF guard for private-LAN image URLs).
 
-[Unreleased]: https://github.com/MindStone-Agent/cortex/compare/v0.9.1...HEAD
+[Unreleased]: https://github.com/MindStone-Agent/cortex/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/MindStone-Agent/cortex/compare/v0.9.1...v0.10.0
 [0.9.1]: https://github.com/MindStone-Agent/cortex/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/MindStone-Agent/cortex/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/MindStone-Agent/cortex/compare/v0.7.1...v0.8.0
