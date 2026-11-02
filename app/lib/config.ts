@@ -75,7 +75,7 @@ export type Integrations = {
 export type ContainedOllama = {
   /** Snapshot file name: lowercase letters, digits and dashes. */
   id: string;
-  /** Heading shown on the dashboard, e.g. "net-arbiter". */
+  /** Heading shown on the dashboard, e.g. "my-app". */
   label: string;
   /** Docker container name to read. */
   container: string;
