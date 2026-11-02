@@ -15,9 +15,10 @@ a verified clean install on a stock DGX Spark and a demo + landing pitch.
 ## [0.10.0] — 2026-11-02
 
 ### Changed
-- **A contained runtime shows only where its container exists.** The collector now checks the
-  container with `docker inspect` first; when it isn't on this box, the runtime is recorded as not
-  present and the Models card hides it, instead of showing an error. With no collector set up, nothing
+- **A contained runtime shows only where its container exists.** The collector now lists the box's
+  containers (`docker ps -a`) each cycle; when the container isn't in that list, the runtime is
+  recorded as not present and the Models card hides it, instead of showing an error. If Docker can't
+  be asked at all (daemon down, lost access), every runtime shows that error rather than vanishing. With no collector set up, nothing
   is shown either. A container that exists but is stopped, or whose Ollama fails, still shows **error**.
 
 ## [0.9.1] — 2026-11-02
