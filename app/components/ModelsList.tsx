@@ -292,12 +292,91 @@ function ComfyRow({ m }: { m: ComfyModel }) {
   );
 }
 
+
+type ContainedRuntime = {
+  id: string;
+  label: string;
+  container: string;
+  note: string | null;
+  checkedAt: string | null;
+  stale: boolean;
+  ok: boolean;
+  error: string | null;
+  loaded: { name: string; size: string; processor: string; context: string; until: string }[];
+  models: { name: string; size: string }[];
+};
+
+// "262144" -> "256K"; anything non-numeric is shown as-is.
+const ctxLabel = (v: string) => (/^\d+$/.test(v) ? fmtCtx(Number(v)) : v);
+
+// A contained Ollama (no host port), read from the collector's snapshot. Read-only:
+// the app that owns the container manages its models, so there are no lifecycle actions.
+function ContainedSection({ rt }: { rt: ContainedRuntime }) {
+  const loaded = new Map(rt.loaded.map((m) => [m.name, m]));
+  const names = [...new Set([...rt.loaded.map((m) => m.name), ...rt.models.map((m) => m.name)])];
+  const sizeOf = (n: string) => rt.models.find((m) => m.name === n)?.size ?? loaded.get(n)?.size ?? "";
+  const live = rt.ok && !rt.stale;
+  return (
+    <section className="mb-6">
+      <div className="flex items-baseline justify-between mb-1">
+        <h4 className="text-sm font-medium text-ink-100">
+          {rt.label}
+          <span className="ml-2 text-xs text-ink-400 font-mono">
+            · contained Ollama · {rt.loaded.length} loaded of {names.length}
+          </span>
+        </h4>
+        <span
+          className={"text-[10px] uppercase tracking-wider font-mono " + (live ? "text-nvgreen-500" : "text-gold-400")}
+          title={rt.checkedAt ? `checked ${rt.checkedAt}` : undefined}
+        >
+          {live ? "live" : rt.stale ? "stale" : "error"}
+        </span>
+      </div>
+      <p className="mb-3 text-xs text-ink-400">
+        {rt.note ?? `Container ${rt.container}, read with docker exec; no network port.`}
+      </p>
+      {!live && rt.error && <p className="mb-2 text-xs text-error font-mono">{rt.error}</p>}
+      {names.length === 0 ? (
+        <p className="text-xs text-ink-400 italic">No models reported yet.</p>
+      ) : (
+        <ul className="lg:w-1/2 lg:pr-4">
+          {names.map((n) => {
+            const l = loaded.get(n);
+            const pinned = l && /forever/i.test(l.until);
+            return (
+              <li key={n} className="flex items-center justify-between gap-3 py-1.5 border-b border-ink-800/50 last:border-0">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span
+                    className={"inline-block w-1.5 h-1.5 rounded-full shrink-0 " + (l ? "bg-nvgreen-500 animate-pulse" : "bg-ink-700")}
+                    title={l ? "Resident in memory" : "On disk"}
+                  />
+                  <span className="text-sm text-ink-100 font-mono truncate">{n}</span>
+                  {l && (
+                    <span className="shrink-0 text-[9px] uppercase tracking-wider font-mono text-nvgreen-500 border border-nvgreen-500/40 rounded px-1 py-px">
+                      loaded · {l.processor}{pinned ? " · pinned" : l.until ? ` · ${l.until}` : ""}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-3 text-xs font-mono text-ink-400 shrink-0">
+                  {l?.context && <span className="text-ink-500" title="Context window in use (tokens)">{ctxLabel(l.context)} ctx</span>}
+                  <span className="text-ink-300 w-16 text-right">{l?.size || sizeOf(n)}</span>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 export function ModelsList() {
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Live resident-model state (name -> keep-alive), polled fast + cheap from /api/ps.
   const [loadedMap, setLoadedMap] = useState<Record<string, LoadedInfo>>({});
   const [liveReady, setLiveReady] = useState(false);
+  const [contained, setContained] = useState<ContainedRuntime[]>([]);
 
   const load = useCallback(async () => {
     try {
@@ -324,6 +403,26 @@ export function ModelsList() {
       /* keep last known */
     }
   }, []);
+
+  const loadContained = useCallback(async () => {
+    try {
+      const res = await fetch("/api/models/contained");
+      if (!res.ok) return;
+      const json = (await res.json()) as { runtimes?: ContainedRuntime[] };
+      setContained(json.runtimes ?? []);
+    } catch {
+      /* keep last known */
+    }
+  }, []);
+
+  useEffect(() => {
+    const initial = setTimeout(loadContained, 0);
+    const interval = setInterval(loadContained, 4000);
+    return () => {
+      clearTimeout(initial);
+      clearInterval(interval);
+    };
+  }, [loadContained]);
 
   const refresh = useCallback(() => {
     void load();
@@ -391,11 +490,17 @@ export function ModelsList() {
         </span>
       </div>
 
+      {/* Contained Ollama runtimes (cortex-config.json containedOllama), first: on a box
+          serving an app's own models, they're the ones in use. */}
+      {contained.map((rt) => (
+        <ContainedSection key={rt.id} rt={rt} />
+      ))}
+
       {/* Ollama */}
       <section className="mb-6">
         <div className="flex items-baseline justify-between mb-3">
           <h4 className="text-sm font-medium text-ink-100">
-            Ollama
+            {contained.length > 0 ? "Ollama · host" : "Ollama"}
             <span className="ml-2 text-xs text-ink-400 font-mono">
               · {data.ollama?.length ?? 0} models · {fmtGB(ollamaTotal)}
             </span>

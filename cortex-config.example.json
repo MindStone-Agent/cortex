@@ -49,5 +49,6 @@
     "ollamaUpdate": false,
     "toolInstall": false,
     "tailscale": false
-  }
+  },
+  "containedOllama": []
 }

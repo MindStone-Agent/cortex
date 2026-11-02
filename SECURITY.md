@@ -16,7 +16,8 @@ exposing it anywhere beyond that.
 ### What an unauthenticated visitor can do by default
 
 - Read system + GPU telemetry, host OS/kernel/driver versions, disk usage, and your
-  loaded/available Ollama models (`/api/system`, `/api/perf`, `/api/models`, `/api/health`).
+  loaded/available Ollama models (`/api/system`, `/api/perf`, `/api/models`, `/api/health`),
+  and, if configured, the loaded models of contained Ollama runtimes (`/api/models/contained`).
 - See which common AI-tool ports are open on the host (`/api/discover`).
 - Change the dashboard's appearance (`/api/settings` writes `theme.json` — cosmetic only).
 
@@ -48,6 +49,21 @@ in `cortex-config.json`:
 - **`system.tailscale`** — install / connect / disconnect Tailscale. Requires
   `scripts/enable-tailscale-control.sh`, which grants passwordless sudo for **three fixed
   verbs** (`status` / `up` / `down`) of one root-owned wrapper.
+
+**Contained Ollama runtimes** (`containedOllama` in `cortex-config.json`, set up with
+`scripts/enable-contained-ollama.sh`) are read-only and are not a web-triggered action: a separate
+user service runs `docker exec <container> ollama ps|list` for the configured containers and writes
+snapshot files that the web process only reads. The web process never runs Docker, and nothing a
+visitor sends reaches the collector. It needs the Cortex user in the `docker` group, which is
+root-equivalent on the host: the collector is trusted code by construction, not sandboxed, so keep
+the Cortex user itself trusted.
+
+**What this discloses, deliberately.** A configured runtime's label, container name, model names,
+loaded state, and (when the collector fails) up to 200 characters of `docker exec` error output are
+shown to anyone who can reach Cortex, like the rest of the dashboard. That is reconnaissance-grade
+metadata, not secrets, and it is **off by default**: the shipped `containedOllama` list is empty, so
+nothing is shown until you name a container. Only configure it on a box where that is acceptable, and
+remove the entry (or stop the `cortex-contained-ollama` service) when the box is no longer needed.
 
 Each is deliberately bounded (a fixed wrapper / a fixed catalog / fixed verbs — never arbitrary
 commands), but once enabled they are reachable **without authentication** by anyone on the

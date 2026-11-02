@@ -12,6 +12,22 @@ clean install point and its notes live here.
 Tracked toward **v1.0** (see the [v1.0 milestone](https://github.com/MindStone-Agent/cortex/milestone/1)):
 a verified clean install on a stock DGX Spark and a demo + landing pitch.
 
+## [0.9.0] — 2026-11-02
+
+### Added
+- **Contained Ollama runtimes on the dashboard.** An app can run its own Ollama inside a
+  container with no host port, for example net-arbiter's model server on an internal Docker
+  network. Cortex couldn't see those models, so a host whose memory was full of them showed
+  nothing loaded. A new opt-in collector (`scripts/cortex-contained-ollama.py`, installed as a
+  systemd user service by `scripts/enable-contained-ollama.sh`) reads each `containedOllama`
+  entry in `cortex-config.json` with `docker exec <container> ollama ps|list` and writes a
+  snapshot file. A new read-only route (`/api/models/contained`) serves those files, and the
+  Models card shows each runtime as its own section, above the host Ollama: loaded models with processor, context and
+  keep-alive, then the rest of its inventory, with a live/stale marker. The web process never
+  talks to Docker, and container names come only from the config, validated, passed as argv.
+  Off by default (the shipped `containedOllama` list is empty); SECURITY.md names what it discloses.
+- The host Ollama section is headed "Ollama · host" when any contained runtime is configured.
+
 ## [0.8.0] — 2026-08-19
 
 ### Added
@@ -194,7 +210,8 @@ a verified clean install on a stock DGX Spark and a demo + landing pitch.
 - Open WebUI reconfigure script (`:ollama` → `:main` image, preserves the data
   volume, fixes the SSRF guard for private-LAN image URLs).
 
-[Unreleased]: https://github.com/MindStone-Agent/cortex/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/MindStone-Agent/cortex/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/MindStone-Agent/cortex/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/MindStone-Agent/cortex/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/MindStone-Agent/cortex/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/MindStone-Agent/cortex/compare/v0.6.0...v0.7.0
