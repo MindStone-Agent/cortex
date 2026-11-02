@@ -22,7 +22,7 @@ a verified clean install on a stock DGX Spark and a demo + landing pitch.
   systemd user service by `scripts/enable-contained-ollama.sh`) reads each `containedOllama`
   entry in `cortex-config.json` with `docker exec <container> ollama ps|list` and writes a
   snapshot file. A new read-only route (`/api/models/contained`) serves those files, and the
-  Models card shows each runtime as its own section: loaded models with processor, context and
+  Models card shows each runtime as its own section, above the host Ollama: loaded models with processor, context and
   keep-alive, then the rest of its inventory, with a live/stale marker. The web process never
   talks to Docker, and container names come only from the config, validated, passed as argv.
 - The host Ollama section is headed "Ollama · host" when any contained runtime is configured.

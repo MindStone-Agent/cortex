@@ -490,6 +490,12 @@ export function ModelsList() {
         </span>
       </div>
 
+      {/* Contained Ollama runtimes (cortex-config.json containedOllama), first: on a box
+          serving an app's own models, they're the ones in use. */}
+      {contained.map((rt) => (
+        <ContainedSection key={rt.id} rt={rt} />
+      ))}
+
       {/* Ollama */}
       <section className="mb-6">
         <div className="flex items-baseline justify-between mb-3">
@@ -537,11 +543,6 @@ export function ModelsList() {
           </div>
         )}
       </section>
-
-      {/* Contained Ollama runtimes (cortex-config.json containedOllama) */}
-      {contained.map((rt) => (
-        <ContainedSection key={rt.id} rt={rt} />
-      ))}
 
       {/* ComfyUI */}
       <section>
